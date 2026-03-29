@@ -151,62 +151,118 @@ function buildFlags(coin){
   return flags;
 }
 
+function aiClamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function aiFmtPct(v){var n=parseFloat(v||0);return (n>0?'+':'')+n.toFixed(2)+'%';}
+function aiVolTrend(coin){
+  var kl=coin.kl||[];
+  if(kl.length<12)return 'unknown';
+  var earlyVol=0,lateVol=0;
+  for(var i=0;i<6;i++)earlyVol+=parseFloat(kl[i][5]||0);
+  for(var j=kl.length-6;j<kl.length;j++)lateVol+=parseFloat(kl[j][5]||0);
+  return lateVol>earlyVol*1.3?'increasing':lateVol<earlyVol*0.7?'decreasing':'flat';
+}
+function buildLocalAnalysis(coin){
+  var t=coin.t,a=coin.a,spot=coin.spot;
+  var ageDays=Math.round((Date.now()-coin.ot)/864e5);
+  var chg=parseFloat(t.priceChangePercent||0);
+  var fr=parseFloat(coin.fr||0);
+  var vol=parseFloat(t.quoteVolume||0);
+  var oi=parseFloat(coin.oi||0);
+  var volTrend=aiVolTrend(coin);
+  var flags=buildFlags(coin).map(function(f){return f.text;});
+  var bias=a.sc-50;
+  var reasons=[];
+  var risks=[];
+
+  if(a.tr>68){bias+=8;reasons.push('trend is strong');}
+  else if(a.tr<35){bias-=8;reasons.push('trend is weak');}
+
+  if(a.mom>72){bias+=7;reasons.push('momentum is still pressing higher');}
+  else if(a.mom<35){bias-=7;reasons.push('momentum is fading');}
+
+  if(volTrend==='increasing'){bias+=5;reasons.push('volume is building instead of drying up');}
+  else if(volTrend==='decreasing'){bias-=6;risks.push('volume is fading');}
+
+  if(vol>5e7){bias+=4;reasons.push('liquidity is strong enough for follow-through');}
+  else if(vol<2e6){bias-=5;risks.push('liquidity is thin');}
+
+  if(ageDays<=3){bias+=4;reasons.push('it is still in the fresh-listing phase');}
+  else if(ageDays>=14){bias-=3;risks.push('the initial listing impulse may be maturing');}
+
+  if(spot){
+    var spotChg=parseFloat(spot.priceChangePercent||0);
+    if(spotChg>5&&spotChg<20){bias+=4;reasons.push('spot is grinding up with the perp');}
+    if(spotChg>20){bias-=5;risks.push('spot already looks overheated');}
+    if(spotChg<-5){bias-=5;risks.push('spot is not confirming the perp move');}
+  } else {
+    bias-=2;
+    risks.push('there is no spot pair to validate demand');
+  }
+
+  if(fr>0.05){bias-=8;risks.push('funding is crowded on the long side');}
+  else if(fr<-0.02){bias+=4;reasons.push('negative funding gives room for upside squeeze');}
+
+  if(flags.indexOf('VERTICAL PUMP')!==-1){bias-=10;risks.push('the move already looks vertical');}
+  if(flags.indexOf('OVERCROWDED LONGS')!==-1){bias-=7;risks.push('late longs are probably crowded');}
+  if(flags.indexOf('SELLING PRESSURE')!==-1){bias-=7;reasons.push('recent price action is under pressure');}
+  if(flags.indexOf('DOWNTREND')!==-1){bias-=6;reasons.push('structure is leaning lower');}
+  if(flags.indexOf('UPTREND')!==-1){bias+=5;reasons.push('structure is still pointing up');}
+  if(flags.indexOf('HIGH VOLUME')!==-1){bias+=3;reasons.push('participation is elevated');}
+  if(flags.indexOf('LOW VOLUME')!==-1){bias-=4;risks.push('follow-through may be weak');}
+
+  if(oi>0&&a.act>65&&chg>0){bias+=3;reasons.push('open interest/activity suggest the move still has participation');}
+  if(chg<-5){bias-=5;reasons.push('the tape already favors downside continuation');}
+
+  var verdict='neutral';
+  if(bias>=12)verdict='pump';
+  else if(bias<=-12)verdict='dump';
+
+  var continuation=aiClamp(Math.round(50+Math.abs(bias)*1.8),18,95);
+  if(verdict==='neutral')continuation=aiClamp(Math.round(48+Math.abs(bias)*0.8),25,65);
+
+  var reasoning='';
+  if(verdict==='pump'){
+    reasoning='Bullish continuation bias. '+(reasons.slice(0,3).join(', ')||'The listing still has decent momentum')+'. '+(risks[0]?'Main risk: '+risks[0]+'.':'Risk is a late blow-off move if buyers get exhausted.');
+  } else if(verdict==='dump'){
+    reasoning='Bearish/distribution bias. '+(reasons.slice(0,3).join(', ')||'The move is losing quality')+'. '+(risks[0]?'Main risk: '+risks[0]+'.':'Risk is a squeeze against crowded shorts if sellers lose control.');
+  } else {
+    reasoning='Neutral/watch bias. The signals are mixed: '+((reasons[0]||'some support exists')+' but '+(risks[0]||'follow-through is not clean'))+'. Better to wait for expansion or failure confirmation.';
+  }
+
+  var bullCase='';
+  var bearCase='';
+  var tradeAngle='';
+  if(verdict==='pump'){
+    bullCase='If price holds dips and funding stays manageable, the listing can keep grinding higher before true distribution starts.';
+    bearCase='If the move turns vertical again while volume fades, this can flip into a liquidity event and retrace hard.';
+    tradeAngle='Prefer buy-the-dip or tight consolidation breaks, not random chasing after a large green candle.';
+  } else if(verdict==='dump'){
+    bullCase='A clean reclaim with improving volume could turn this into a squeeze and invalidate the bearish read.';
+    bearCase='If weak bounces fail and funding/spot do not improve, distribution can continue lower.';
+    tradeAngle='Prefer failed-bounce shorts or breakdown retests, and avoid forcing entries after an extended flush candle.';
+  } else {
+    bullCase='A stable base with improving volume and spot confirmation would turn this into a continuation candidate.';
+    bearCase='If support breaks with fading spot/futures participation, it likely shifts into distribution.';
+    tradeAngle='Wait for either a confirmed breakout with participation or a failed bounce that clearly rolls over.';
+  }
+
+  return {
+    verdict:verdict,
+    continuation_probability:continuation,
+    reasoning:reasoning,
+    bull_case:bullCase,
+    bear_case:bearCase,
+    trade_angle:tradeAngle,
+    source:'local-model'
+  };
+}
+
 function getAIAnalysis(coin){
   var sym=coin.sym;
   if(aiCache[sym])return Promise.resolve(aiCache[sym]);
-
-  var t=coin.t,a=coin.a,spot=coin.spot,fr=coin.fr;
-  var ageDays=Math.round((Date.now()-coin.ot)/864e5);
-  var kl=coin.kl||[];
-  var volTrend='unknown';
-  if(kl.length>=12){
-    var earlyVol=0,lateVol=0;
-    for(var i=0;i<6;i++)earlyVol+=parseFloat(kl[i][5]||0);
-    for(var i=kl.length-6;i<kl.length;i++)lateVol+=parseFloat(kl[i][5]||0);
-    volTrend=lateVol>earlyVol*1.3?'increasing (bullish)':lateVol<earlyVol*0.7?'decreasing (bearish)':'flat';
-  }
-
-  var payload={
-    coin:{
-      symbol:sym,
-      price:parseFloat(t.lastPrice||0),
-      change_24h_pct:parseFloat(t.priceChangePercent||0),
-      futures_volume_24h_usd:parseFloat(t.quoteVolume||0),
-      funding_rate_pct:parseFloat(fr||0),
-      age_days:ageDays,
-      technical_score:parseFloat(a.sc||0),
-      momentum_score:parseFloat(a.mom||0),
-      trend_score:parseFloat(a.tr||0),
-      volume_score:parseFloat(a.vol||0),
-      activity_score:parseFloat(a.act||0),
-      heuristic_verdict:a.vd,
-      heuristic_confidence:parseFloat(a.cf||0),
-      open_interest:parseFloat(coin.oi||0),
-      volume_trend:volTrend,
-      has_spot_pair:!!spot,
-      spot_change_24h_pct:spot?parseFloat(spot.priceChangePercent||0):0,
-      spot_volume_24h_usd:spot?parseFloat(spot.quoteVolume||0):0,
-      flags:buildFlags(coin).map(function(f){return f.text;})
-    }
-  };
-
-  return fetch(PX+'/ai/analyze',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-  }).then(function(r){
-    return r.json().then(function(d){
-      if(!r.ok)throw new Error(d&&d.error?d.error:'HTTP '+r.status);
-      return d;
-    });
-  }).then(function(d){
-    aiCache[sym]=d;
-    return d;
-  }).catch(function(e){
-    var fallback={verdict:a.vd,continuation_probability:a.cf,reasoning:'Analysis unavailable: '+e.message,bull_case:'Technical momentum supports continuation.',bear_case:'Risk of distribution as a liquidity event.',trade_angle:'Wait for clear directional break before entering.',source:'fallback'};
-    aiCache[sym]=fallback;
-    return fallback;
-  });
+  var analysis=buildLocalAnalysis(coin);
+  aiCache[sym]=analysis;
+  return Promise.resolve(analysis);
 }
 
 function lNL(){S.ln=true;S.en=null;rd();return Promise.all([pF('/fapi/v1/exchangeInfo'),pF('/fapi/v1/ticker/24hr')]).then(function(res){var ex=res[0],tk=res[1];var ob={};(ex.symbols||[]).forEach(function(s){if(s.quoteAsset==='USDT'&&s.contractType==='PERPETUAL'&&s.status==='TRADING')ob[s.symbol]=s.onboardDate;});var tm={};tk.forEach(function(t){tm[t.symbol]=t;});var cu=Date.now()-ND*864e5;var ns=Object.entries(ob).filter(function(e){return e[1]>=cu;}).sort(function(a,b){return b[1]-a[1];}).slice(0,14).map(function(e){return{sym:e[0],ot:e[1]};});return Promise.all(ns.map(function(n){var t=tm[n.sym]||{};var base=n.sym.replace('USDT','');return Promise.all([fK(n.sym),fOI(n.sym),fFR(n.sym),fSpot(base)]).then(function(r){var a=az(Object.assign({},t,{klines:r[0],oi:r[1],openTime:n.ot}));return{sym:n.sym,ot:n.ot,t:t,kl:r[0],oi:r[1],fr:r[2],spot:r[3],a:a,aiData:null,aiLoading:false};});}));}).then(function(en){S.nc=en.sort(function(a,b){return b.a.sc-a.a.sc;});}).catch(function(e){S.en=e.message;}).then(function(){S.ln=false;rd();loadAIForAll();});}
@@ -248,7 +304,7 @@ function renderAI(coin){
   var col=vc(vd);
   var probColor=prob>=65?'var(--pump)':prob<=40?'var(--dump)':'var(--neutral)';
   var h='<div class="ai-section">';
-  h+='<div class="ai-header"><span class="ai-label">AI Analysis</span><span class="ai-prob" style="color:'+probColor+'">'+prob+'% continuation</span></div>';
+  h+='<div class="ai-header"><span class="ai-label">Scout Analysis</span><span class="ai-prob" style="color:'+probColor+'">'+prob+'% continuation</span></div>';
   h+='<div class="prob-bar"><div class="prob-fill" style="width:'+prob+'%;background:'+probColor+'"></div></div>';
   h+='<div class="prob-labels"><span>DUMP</span><span>NEUTRAL</span><span>PUMP</span></div>';
   h+='<div class="ai-body" style="margin-top:10px">';
