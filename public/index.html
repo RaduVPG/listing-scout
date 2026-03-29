@@ -539,41 +539,6 @@ function buildWatchLevels(coin){
   }
   return {symbol:sym,levels:levels};
 }
-function binanceFuturesUrl(sym){return 'https://www.binance.com/en/futures/'+encodeURIComponent(sym||'');}
-function binanceToken(sym){return String(sym||'').replace(/[^A-Za-z0-9]/g,'');}
-function openBinanceApp(sym){
-  var token=binanceToken(sym);
-  var web=binanceFuturesUrl(sym);
-  var schemes=[
-    'binance://app.binance.com/en/futures/'+encodeURIComponent(token),
-    'bnc://app.binance.com/en/futures/'+encodeURIComponent(token),
-    'binance://open?url='+encodeURIComponent('/en/futures/'+token),
-    'bnc://open?url='+encodeURIComponent('/en/futures/'+token)
-  ];
-  var iframe=document.getElementById('binance-app-probe');
-  if(!iframe){
-    iframe=document.createElement('iframe');
-    iframe.id='binance-app-probe';
-    iframe.style.display='none';
-    document.body.appendChild(iframe);
-  }
-  var done=false;
-  var cleanup=function(){
-    window.removeEventListener('blur',onLeave);
-    window.removeEventListener('pagehide',onLeave);
-    document.removeEventListener('visibilitychange',onVisibility);
-  };
-  var onLeave=function(){done=true;cleanup();};
-  var onVisibility=function(){if(document.hidden){done=true;cleanup();}};
-  window.addEventListener('blur',onLeave);
-  window.addEventListener('pagehide',onLeave);
-  document.addEventListener('visibilitychange',onVisibility);
-  try{iframe.src=schemes[0];}catch(e){}
-  setTimeout(function(){if(!done)try{iframe.src=schemes[1];}catch(e){}},180);
-  setTimeout(function(){if(!done)try{window.location.href=schemes[2];}catch(e){}},360);
-  setTimeout(function(){if(!done)try{window.location.href=schemes[3];}catch(e){}},540);
-  setTimeout(function(){if(!done)window.location.href=web;cleanup();},1100);
-}
 function copyAlertLevel(btn,sym,label,price){
   var text=(sym||'')+' | '+label+' | '+price;
   var done=function(){if(btn){var old=btn.innerHTML;btn.innerHTML='COPIED';setTimeout(function(){btn.innerHTML=old;},1200);}};
@@ -583,10 +548,10 @@ function copyAlertLevel(btn,sym,label,price){
 function renderWatchLevels(coin){
   var watch=buildWatchLevels(coin);
   if(!watch||!watch.levels||!watch.levels.length)return '';
-  var h='<div class="watch-levels"><div class="watch-head"><span class="watch-title">Watch Levels</span><span class="watch-help">Try App first. If Telegram blocks it, use Web.</span></div>';
+  var h='<div class="watch-levels"><div class="watch-head"><span class="watch-title">Watch Levels</span><span class="watch-help">Copy level for your alert setup.</span></div>';
   for(var i=0;i<watch.levels.length;i++){
     var lv=watch.levels[i],p=fmtLevelPrice(lv.price),tone=lv.tone||'neutral';
-    h+='<div class="level-row"><div class="level-main"><div class="level-label">'+lv.label+'</div><div class="level-note">'+lv.note+'</div></div><div class="level-side"><div class="level-price '+tone+'">'+p+'</div><div class="level-actions"><button class="level-btn '+tone+'" onclick="copyAlertLevel(this,\''+watch.symbol+'\',\''+lv.label.replace(/'/g,'&#39;')+'\',\''+p+'\')">Copy</button><button class="level-btn link" onclick="openBinanceApp(\''+watch.symbol+'\')">App</button><a class="level-btn link" href="'+binanceFuturesUrl(watch.symbol)+'">Web</a></div></div></div>';
+    h+='<div class="level-row"><div class="level-main"><div class="level-label">'+lv.label+'</div><div class="level-note">'+lv.note+'</div></div><div class="level-side"><div class="level-price '+tone+'">'+p+'</div><div class="level-actions"><button class="level-btn '+tone+'" onclick="copyAlertLevel(this,\''+watch.symbol+'\',\''+lv.label.replace(/'/g,'&#39;')+'\',\''+p+'\')">Copy</button></div></div></div>';
   }
   h+='</div>';
   return h;
