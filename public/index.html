@@ -27,7 +27,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .summary-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:16px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none}
 .summary-item{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .summary-dot{width:8px;height:8px;border-radius:50%}
-.summary-dot.pump{background:var(--pump)}.summary-dot.dump{background:var(--dump)}.summary-dot.neutral{background:var(--neutral)}
+.summary-dot.pump{background:var(--pump)}.summary-dot.dump{background:var(--dump)}.summary-dot.neutral{background:var(--neutral)}.summary-dot.accent{background:var(--accent2)}
 .summary-num{font-family:var(--mono);font-size:15px;font-weight:700}
 .summary-txt{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em}
 .summary-divider{width:1px;height:24px;background:var(--border);flex-shrink:0}
@@ -36,16 +36,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .chip.active{background:var(--surface3);color:var(--text);border-color:var(--border2)}
 .chip.pump.active{background:rgba(0,229,160,0.1);color:var(--pump);border-color:rgba(0,229,160,0.25)}
 .chip.dump.active{background:rgba(255,77,109,0.1);color:var(--dump);border-color:rgba(255,77,109,0.25)}
+.chip.neutral.active{background:rgba(245,197,66,0.1);color:var(--neutral);border-color:rgba(245,197,66,0.25)}
+.chip.accent.active{background:rgba(167,139,250,0.1);color:var(--accent2);border-color:rgba(167,139,250,0.25)}
 .coin-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;position:relative;overflow:hidden}
 .coin-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .coin-card.pump::before{background:var(--pump)}.coin-card.dump::before{background:var(--dump)}.coin-card.neutral::before{background:var(--neutral)}
-.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:10px}
 .coin-symbol{font-size:20px;font-weight:800;letter-spacing:-0.02em;line-height:1;margin-bottom:3px}
 .coin-label{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .verdict-pill{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border:1px solid transparent;flex-shrink:0}
 .verdict-pill.pump{background:rgba(0,229,160,0.1);color:var(--pump);border-color:rgba(0,229,160,0.2)}
 .verdict-pill.dump{background:rgba(255,77,109,0.1);color:var(--dump);border-color:rgba(255,77,109,0.2)}
 .verdict-pill.neutral{background:rgba(245,197,66,0.1);color:var(--neutral);border-color:rgba(245,197,66,0.2)}
+.mode-line{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mode-pill{font-size:10px;font-weight:700;padding:4px 8px;border-radius:20px;font-family:var(--mono);letter-spacing:0.04em;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--muted2)}
+.mode-pill.primary{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,0.06)}
+.mode-pill.cont{color:var(--pump);border-color:rgba(0,229,160,0.22);background:rgba(0,229,160,0.11)}
+.mode-pill.dump{color:var(--dump);border-color:rgba(255,77,109,0.22);background:rgba(255,77,109,0.11)}
+.mode-pill.squeeze{color:var(--accent2);border-color:rgba(167,139,250,0.22);background:rgba(167,139,250,0.11)}
+.mode-pill.swing{color:var(--neutral);border-color:rgba(245,197,66,0.22);background:rgba(245,197,66,0.11)}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 .metric{background:var(--surface2);border-radius:10px;padding:8px 10px}
 .metric-label{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:3px}
@@ -53,19 +62,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .metric-value.up{color:var(--pump)}.metric-value.down{color:var(--dump)}.metric-value.def{color:var(--text)}
 .signals{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .signal-row{display:flex;align-items:center;gap:8px}
-.signal-label{font-size:11px;color:var(--muted2);width:80px;flex-shrink:0;font-family:var(--mono)}
+.signal-label{font-size:11px;color:var(--muted2);width:84px;flex-shrink:0;font-family:var(--mono)}
 .bar-track{flex:1;height:4px;background:var(--surface3);border-radius:4px;overflow:hidden}
 .bar-fill{height:100%;border-radius:4px}
 .bar-val{font-size:11px;font-family:var(--mono);width:32px;text-align:right;color:var(--muted2)}
-.conf-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
-.conf-lbl{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.conf-val{font-size:13px;font-weight:700;font-family:var(--mono)}
 .ai-section{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
-.ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px}
 .ai-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);font-family:var(--mono)}
-.ai-prob{font-size:13px;font-weight:700;font-family:var(--mono)}
+.ai-prob{font-size:13px;font-weight:700;font-family:var(--mono);text-align:right}
 .ai-body{font-size:12px;color:var(--muted2);line-height:1.6;background:var(--surface3);border-radius:10px;padding:10px 12px}
-.ai-score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;margin-bottom:10px}
+.ai-score-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;margin-bottom:10px}
 .ai-score{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:8px 9px}
 .ai-score-lbl{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px}
 .ai-score-val{font-size:15px;font-weight:700;font-family:var(--mono);line-height:1}
@@ -123,9 +129,102 @@ function fOI(s){return pF('/fapi/v1/openInterest?symbol='+s).then(function(d){re
 function fFR(s){return pF('/fapi/v1/fundingRate?symbol='+s+'&limit=3').then(function(d){return d&&d.length?parseFloat(d[d.length-1].fundingRate)*100:0;}).catch(function(){return 0;});}
 function fSpot(s){return fetch('https://api.binance.com/api/v3/ticker/24hr?symbol='+s+'USDT').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}
 
-function fUp(){return pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=20&catalogId=48').then(function(d){var art=d&&d.data&&d.data.articles?d.data.articles:[];var res=[];for(var i=0;i<art.length;i++){var a=art[i];var t=a.title||'';var sm=(t.match(/([A-Z]{2,10})USDT/g)||[]).filter(function(v,i,arr){return arr.indexOf(v)===i;});var dm=t.match(/(\d{4}-\d{2}-\d{2})/);var ld=dm?new Date(dm[1]).getTime():null;for(var j=0;j<sm.length;j++){var b=sm[j].replace('USDT','');res.push({symbol:b+'/USDT',base:b,title:t.length>80?t.slice(0,77)+'...':t,listDate:ld,ad:a.releaseDate||Date.now()});}}var seen={};for(var k=0;k<res.length;k++){var rx=res[k];if(!seen[rx.base]||rx.ad>seen[rx.base].ad)seen[rx.base]=rx;}var out=[];for(var key in seen)out.push(seen[key]);return out.slice(0,10);});}
+function fUp(){return pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=20&catalogId=48').then(function(d){var art=d&&d.data&&d.data.articles?d.data.articles:[];var res=[];for(var i=0;i<art.length;i++){var a=art[i];var t=a.title||'';var sm=(t.match(/([A-Z]{2,10})USDT/g)||[]).filter(function(v,j,arr){return arr.indexOf(v)===j;});var dm=t.match(/(\d{4}-\d{2}-\d{2})/);var ld=dm?new Date(dm[1]).getTime():null;for(var k=0;k<sm.length;k++){var b=sm[k].replace('USDT','');res.push({symbol:b+'/USDT',base:b,title:t.length>80?t.slice(0,77)+'...':t,listDate:ld,ad:a.releaseDate||Date.now()});}}var seen={};for(var m=0;m<res.length;m++){var rx=res[m];if(!seen[rx.base]||rx.ad>seen[rx.base].ad)seen[rx.base]=rx;}var out=[];for(var key in seen)out.push(seen[key]);return out.slice(0,10);});}
 
 function az(o){var chg=parseFloat(o.priceChangePercent)||0,vol=parseFloat(o.quoteVolume)||0,tc=parseInt(o.count)||0;var mom=Math.min(100,Math.max(0,50+chg*2)),volS=Math.min(100,(vol/5e6)*40+30),act=Math.min(100,(tc/5e4)*100);var tr=50;var kl=o.klines||[];if(kl.length>=6){var cl=kl.slice(-12).map(function(k){return parseFloat(k[4]);});var n=cl.length,xm=(n-1)/2,ym=cl.reduce(function(a,b){return a+b;},0)/n;var nu=0,de=0;cl.forEach(function(y,x){nu+=(x-xm)*(y-ym);de+=(x-xm)*(x-xm);});var sl=de?nu/de:0;tr=Math.min(100,Math.max(0,50+(ym?(sl/ym)*100:0)*20));}var oiS=Math.min(100,o.oi>0?Math.log(o.oi+1)/Math.LN10*20:40);var ag=(Date.now()-o.openTime)/864e5,fr=ag<3?70:ag<7?62:ag<14?54:42;var sc=Math.round(mom*.3+volS*.2+tr*.2+act*.1+oiS*.1+fr*.1);var vd=sc>=62?'pump':sc<=42?'dump':'neutral';return{mom:mom,vol:volS,act:act,tr:tr,sc:sc,vd:vd,cf:Math.max(10,Math.min(98,Math.round(Math.abs(sc-50)*2)))};}
+
+function aiClamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function fp(n){var v=parseFloat(n);if(!v)return'--';if(v>=1000)return'$'+v.toLocaleString('en',{maximumFractionDigits:0});if(v>=1)return'$'+v.toFixed(3);return'$'+v.toPrecision(4);}
+function fv(n){var v=parseFloat(n);if(!v)return'--';if(v>=1e9)return'$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return'$'+(v/1e6).toFixed(0)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(0)+'K';return'$'+v.toFixed(0);}
+function vc(v){return v==='pump'?'var(--pump)':v==='dump'?'var(--dump)':'var(--neutral)';}
+function sb(v,c){var p=Math.round(v);return '<div class="bar-track"><div class="bar-fill" style="width:'+p+'%;background:'+c+'"></div></div><span class="bar-val">'+p+'</span>';}
+function addUnique(list,text){if(text&&list.indexOf(text)===-1)list.push(text);}
+function scoreLabel(v,mode){if(mode==='risk')return v>=72?'HIGH':v>=55?'ELEVATED':v>=40?'MED':'LOW';return v>=70?'STRONG':v>=55?'LEAN':v>=40?'MIXED':'WEAK';}
+
+function getListingProfile(ageDays){
+  if(ageDays<=1)return{phase:'launch-chaos',label:'LAUNCH CHAOS',trendBoost:12,dumpBoost:4,squeezeBoost:18,swingPenalty:12};
+  if(ageDays<=3)return{phase:'discovery',label:'DISCOVERY WINDOW',trendBoost:16,dumpBoost:8,squeezeBoost:12,swingPenalty:8};
+  if(ageDays<=7)return{phase:'decision-zone',label:'DAY 3-7 DECISION',trendBoost:8,dumpBoost:16,squeezeBoost:8,swingPenalty:2};
+  if(ageDays<=14)return{phase:'post-hype',label:'POST-HYPE CHECK',trendBoost:1,dumpBoost:18,squeezeBoost:4,swingPenalty:0};
+  return{phase:'mature',label:'LATE LISTING',trendBoost:-5,dumpBoost:10,squeezeBoost:1,swingPenalty:4};
+}
+function aiVolTrend(coin){
+  var kl=coin.kl||[];
+  if(kl.length<12)return 'unknown';
+  var earlyVol=0,lateVol=0,i;
+  for(i=0;i<6;i++)earlyVol+=parseFloat(kl[i][5]||0);
+  for(i=kl.length-6;i<kl.length;i++)lateVol+=parseFloat(kl[i][5]||0);
+  return lateVol>earlyVol*1.3?'increasing':lateVol<earlyVol*0.7?'decreasing':'flat';
+}
+function getCandlePulse(coin){
+  var kl=coin.kl||[];
+  var out={bodyBias:0,closePosition:0.5,rangeExpansion:1,greenShare:0,wickiness:0,returnFromHigh:0,returnFromLow:0,last3Change:0,pullbackDepth:0};
+  if(kl.length<8)return out;
+  var recent=kl.slice(-6),older=kl.slice(-12,-6),green=0,bodySum=0,rangeSum=0,olderRange=0,closePos=0,wickSum=0;
+  var i,o,h,l,c,range,upWick,downWick;
+  for(i=0;i<recent.length;i++){
+    o=parseFloat(recent[i][1]||0);h=parseFloat(recent[i][2]||0);l=parseFloat(recent[i][3]||0);c=parseFloat(recent[i][4]||0);
+    range=Math.max(h-l,1e-9);
+    if(c>o)green++;
+    bodySum+=((c-o)/range)*100;
+    closePos+=(c-l)/range;
+    upWick=h-Math.max(o,c);
+    downWick=Math.min(o,c)-l;
+    wickSum+=(upWick+downWick)/range;
+    rangeSum+=range;
+  }
+  for(i=0;i<older.length;i++)olderRange+=Math.max(parseFloat(older[i][2]||0)-parseFloat(older[i][3]||0),1e-9);
+  out.bodyBias=bodySum/recent.length;
+  out.closePosition=closePos/recent.length;
+  out.greenShare=green/recent.length;
+  out.wickiness=wickSum/recent.length;
+  out.rangeExpansion=olderRange>0?(rangeSum/recent.length)/(olderRange/older.length):1;
+  var closes=kl.map(function(k){return parseFloat(k[4]||0);});
+  var highs=kl.map(function(k){return parseFloat(k[2]||0);});
+  var lows=kl.map(function(k){return parseFloat(k[3]||0);});
+  var lastClose=closes[closes.length-1]||0;
+  var recentHigh=Math.max.apply(null,highs.slice(-12));
+  var recentLow=Math.min.apply(null,lows.slice(-12));
+  var baseLow=Math.min.apply(null,lows.slice(-24));
+  out.returnFromHigh=recentHigh>0?((recentHigh-lastClose)/recentHigh)*100:0;
+  out.returnFromLow=baseLow>0?((lastClose-baseLow)/baseLow)*100:0;
+  if(closes.length>=4){out.last3Change=closes[closes.length-4]>0?((lastClose-closes[closes.length-4])/closes[closes.length-4])*100:0;}
+  out.pullbackDepth=recentHigh>0&&recentLow>0?((recentHigh-recentLow)/recentHigh)*100:0;
+  return out;
+}
+function getOiPulse(coin){
+  var oi=parseFloat(coin.oi||0),vol=parseFloat((coin.t&&coin.t.quoteVolume)||0);
+  if(!oi||!vol)return 0;
+  return aiClamp(((Math.log(oi+1)/Math.LN10)*18)+((vol>0?Math.log(vol+1)/Math.LN10:0)*3)-55,-25,25);
+}
+function getSpotBasis(coin){
+  if(!coin.spot||!coin.t)return 0;
+  var perp=parseFloat(coin.t.lastPrice||0),spot=parseFloat(coin.spot.lastPrice||0);
+  if(!perp||!spot)return 0;
+  return ((perp-spot)/spot)*100;
+}
+function pickPrimarySetup(m){
+  var items=[
+    {k:'continuation',v:m.continuation_score||0},
+    {k:'dump',v:m.dump_score||0},
+    {k:'squeeze',v:m.squeeze_trap_score||0},
+    {k:'swing',v:m.swing_entry_score||0}
+  ].sort(function(a,b){return b.v-a.v;});
+  return items[0].k;
+}
+function setupLabel(k){
+  if(k==='continuation')return 'CONTINUATION HUNT';
+  if(k==='dump')return 'POST-LISTING DUMP';
+  if(k==='squeeze')return 'SQUEEZE TRAP';
+  return 'BEST SWING ENTRY';
+}
+function styleLabel(m){
+  if(m.primary_setup==='continuation')return 'Breakout / first pullback';
+  if(m.primary_setup==='dump')return 'Fade bounce / failed reclaim';
+  if(m.primary_setup==='squeeze')return 'Wait for trap then react';
+  return 'Patience / swing only';
+}
+function setupClass(k){return k==='continuation'?'cont':k==='dump'?'dump':k==='squeeze'?'squeeze':'swing';}
 
 function buildFlags(coin){
   var flags=[];
@@ -136,28 +235,30 @@ function buildFlags(coin){
   var profile=getListingProfile(ageDays);
   var pulse=getCandlePulse(coin);
   var oiPulse=getOiPulse(coin);
+  var spotBasis=getSpotBasis(coin);
 
   flags.push({type:'info',text:profile.label});
-
   if(spot){
     flags.push({type:'info',text:'SPOT LISTED'});
     var spotChg=parseFloat(spot.priceChangePercent||0);
     if(spotChg>4&&spotChg<18)flags.push({type:'bull',text:'SPOT CONFIRMS'});
     if(spotChg>18)flags.push({type:'warn',text:'SPOT STRETCHED'});
     if(spotChg<-4)flags.push({type:'bear',text:'SPOT NOT CONFIRMING'});
+    if(spotBasis>1.8)flags.push({type:'warn',text:'PERP PREMIUM'});
   }else{flags.push({type:'warn',text:'NO SPOT PAIR'});}
 
   if(chg>=14)flags.push({type:'warn',text:'VERTICAL DAY'});
-  else if(chg>=5)flags.push({type:'bull',text:'DAY-2 FOLLOW THROUGH'});
+  else if(chg>=5)flags.push({type:'bull',text:'FOLLOW-THROUGH'});
   else if(chg<=-8)flags.push({type:'bear',text:'HEAVY SELL PRESSURE'});
 
   if(vol>60e6)flags.push({type:'bull',text:'HEAVY TURNOVER'});
   else if(vol<3e6)flags.push({type:'bear',text:'THIN TURNOVER'});
 
   if(pulse.rangeExpansion>1.35)flags.push({type:'bull',text:'RANGE EXPANDING'});
-  if(pulse.rangeCompression<0.75)flags.push({type:'warn',text:'RANGE TIGHTENING'});
-  if(pulse.closePosition>0.72)flags.push({type:'bull',text:'HOURLY CLOSES NEAR HIGHS'});
-  if(pulse.closePosition<0.34)flags.push({type:'bear',text:'HOURLY CLOSES WEAK'});
+  if(pulse.closePosition>0.72)flags.push({type:'bull',text:'CLOSES NEAR HIGHS'});
+  if(pulse.closePosition<0.34)flags.push({type:'bear',text:'CLOSES WEAK'});
+  if(pulse.returnFromHigh>8&&pulse.last3Change<0)flags.push({type:'bear',text:'OFF HIGHS HARD'});
+  if(pulse.pullbackDepth<6&&pulse.closePosition>0.62)flags.push({type:'bull',text:'SHALLOW PULLBACK'});
 
   if(oiPulse>10)flags.push({type:'bull',text:'OI BUILDING'});
   if(oiPulse<-10)flags.push({type:'warn',text:'OI FLUSHING'});
@@ -172,54 +273,6 @@ function buildFlags(coin){
   return flags;
 }
 
-function aiClamp(v,min,max){return Math.max(min,Math.min(max,v));}
-function aiFmtPct(v){var n=parseFloat(v||0);return (n>0?'+':'')+n.toFixed(2)+'%';}
-function aiVolTrend(coin){
-  var kl=coin.kl||[];
-  if(kl.length<12)return 'unknown';
-  var earlyVol=0,lateVol=0;
-  for(var i=0;i<6;i++)earlyVol+=parseFloat(kl[i][5]||0);
-  for(var j=kl.length-6;j<kl.length;j++)lateVol+=parseFloat(kl[j][5]||0);
-  return lateVol>earlyVol*1.3?'increasing':lateVol<earlyVol*0.7?'decreasing':'flat';
-}
-function getListingProfile(ageDays){
-  if(ageDays<=2)return{phase:'discovery',label:'DISCOVERY WINDOW',boost:9,risk:7};
-  if(ageDays<=4)return{phase:'price-discovery',label:'PRICE DISCOVERY',boost:12,risk:11};
-  if(ageDays<=7)return{phase:'decision-zone',label:'DAY 3-7 DECISION',boost:10,risk:15};
-  if(ageDays<=14)return{phase:'post-hype',label:'POST-HYPE CHECK',boost:2,risk:18};
-  return{phase:'mature',label:'LATE LISTING',boost:-4,risk:14};
-}
-function getCandlePulse(coin){
-  var kl=coin.kl||[];
-  var out={bodyBias:0,closePosition:0.5,rangeExpansion:1,rangeCompression:1,greenShare:0};
-  if(kl.length<8)return out;
-  var recent=kl.slice(-6),older=kl.slice(-12,-6),green=0,bodySum=0,rangeSum=0,olderRange=0,closePos=0;
-  for(var i=0;i<recent.length;i++){
-    var o=parseFloat(recent[i][1]||0),h=parseFloat(recent[i][2]||0),l=parseFloat(recent[i][3]||0),c=parseFloat(recent[i][4]||0);
-    var range=Math.max(h-l,1e-9);
-    if(c>o)green++;
-    bodySum+=((c-o)/range)*100;
-    rangeSum+=range;
-    closePos+=(c-l)/range;
-  }
-  for(var j=0;j<older.length;j++)olderRange+=Math.max(parseFloat(older[j][2]||0)-parseFloat(older[j][3]||0),1e-9);
-  out.bodyBias=bodySum/recent.length;
-  out.closePosition=closePos/recent.length;
-  out.greenShare=green/recent.length;
-  out.rangeExpansion=olderRange>0?(rangeSum/recent.length)/(olderRange/older.length):1;
-  out.rangeCompression=out.rangeExpansion;
-  return out;
-}
-function getOiPulse(coin){
-  var oi=parseFloat(coin.oi||0),vol=parseFloat((coin.t&&coin.t.quoteVolume)||0);
-  if(!oi||!vol)return 0;
-  return aiClamp(((Math.log(oi+1)/Math.LN10)*18)+((vol>0?Math.log(vol+1)/Math.LN10:0)*3)-55,-25,25);
-}
-function addUnique(list,text){if(text&&list.indexOf(text)===-1)list.push(text);}
-function scoreLabel(v,mode){
-  if(mode==='risk')return v>=72?'HIGH':v>=55?'ELEVATED':v>=40?'MED':'LOW';
-  return v>=70?'STRONG':v>=55?'LEAN':v>=40?'MIXED':'WEAK';
-}
 function buildLocalAnalysis(coin){
   var t=coin.t,a=coin.a,spot=coin.spot;
   var ageDays=Math.max(0,Math.round((Date.now()-coin.ot)/864e5));
@@ -230,95 +283,125 @@ function buildLocalAnalysis(coin){
   var profile=getListingProfile(ageDays);
   var pulse=getCandlePulse(coin);
   var oiPulse=getOiPulse(coin);
-  var continuation=48+profile.boost;
-  var distribution=22+profile.risk;
-  var squeeze=26;
+  var spotBasis=getSpotBasis(coin);
+  var spotChg=spot?parseFloat(spot.priceChangePercent||0):null;
+  var continuation=46+profile.trendBoost;
+  var dump=18+profile.dumpBoost;
+  var squeeze=24+profile.squeezeBoost;
+  var swing=40-profile.swingPenalty;
   var bullReasons=[];
   var bearReasons=[];
+  var swingReasons=[];
+  var trapReasons=[];
   var riskReasons=[];
-  var spotChg=spot?parseFloat(spot.priceChangePercent||0):null;
 
-  if(a.tr>68){continuation+=14;addUnique(bullReasons,'trend is still lifting instead of rolling over');}
-  else if(a.tr<38){distribution+=16;addUnique(bearReasons,'trend already looks broken');}
+  if(a.tr>68){continuation+=14;swing+=6;addUnique(bullReasons,'trend is still rising instead of stalling');}
+  else if(a.tr<40){dump+=15;continuation-=9;addUnique(bearReasons,'trend already looks broken');}
 
-  if(a.mom>74&&chg>0){continuation+=11;distribution+=4;addUnique(bullReasons,'momentum is still printing follow-through');}
-  else if(a.mom<40||chg<-4){distribution+=12;continuation-=8;addUnique(bearReasons,'momentum is fading fast');}
+  if(a.mom>72&&chg>0){continuation+=10;dump+=3;addUnique(bullReasons,'momentum is still pressing higher');}
+  else if(a.mom<42||chg<-4){dump+=12;continuation-=8;addUnique(bearReasons,'momentum is fading fast');}
 
-  if(volTrend==='increasing'){continuation+=8;squeeze+=5;addUnique(bullReasons,'volume is expanding into the move');}
-  else if(volTrend==='decreasing'){distribution+=10;continuation-=6;addUnique(riskReasons,'volume is drying up');}
+  if(volTrend==='increasing'){continuation+=8;squeeze+=6;addUnique(bullReasons,'volume is expanding into the active side');}
+  else if(volTrend==='decreasing'){dump+=9;continuation-=6;swing-=4;addUnique(riskReasons,'volume is fading into the move');}
+  else if(volTrend==='flat'){swing+=4;}
 
-  if(vol>6e7){continuation+=7;squeeze+=4;addUnique(bullReasons,'turnover is strong enough for another leg');}
-  else if(vol<3e6){distribution+=11;continuation-=7;addUnique(riskReasons,'liquidity is thin for a fresh listing');}
+  if(vol>6e7){continuation+=7;squeeze+=4;swing+=2;addUnique(bullReasons,'turnover is strong enough for a second leg');}
+  else if(vol<3e6){dump+=10;continuation-=6;swing-=8;addUnique(riskReasons,'liquidity is too thin for premium setups');}
 
-  if(ageDays<=2){continuation+=8;squeeze+=9;addUnique(bullReasons,'it is still inside the first discovery burst');}
-  else if(ageDays<=4){continuation+=10;distribution+=6;squeeze+=7;addUnique(bullReasons,'day 2-4 listings often trend hardest if they hold');}
-  else if(ageDays<=7){continuation+=5;distribution+=12;squeeze+=3;addUnique(riskReasons,'day 3-7 is where real distribution often starts');}
-  else if(ageDays>10){distribution+=8;continuation-=4;addUnique(bearReasons,'the easy listing impulse is mostly gone');}
+  if(pulse.closePosition>0.72){continuation+=10;swing+=8;addUnique(bullReasons,'recent candles keep closing near highs');}
+  else if(pulse.closePosition<0.36){dump+=11;continuation-=6;addUnique(bearReasons,'recent candles keep closing weak');}
 
-  if(pulse.closePosition>0.72){continuation+=8;addUnique(bullReasons,'recent candles are closing near their highs');}
-  else if(pulse.closePosition<0.36){distribution+=10;continuation-=5;addUnique(bearReasons,'recent candles keep closing weak');}
+  if(pulse.greenShare>=0.66&&pulse.bodyBias>12){continuation+=8;swing+=5;addUnique(bullReasons,'buyers still control the hourly tape');}
+  if(pulse.rangeExpansion>1.35&&chg>0){continuation+=4;dump+=7;squeeze+=5;addUnique(riskReasons,'range is wide so continuation and failure both stay violent');}
+  if(pulse.rangeExpansion<0.9&&pulse.pullbackDepth<7){swing+=12;continuation+=5;addUnique(swingReasons,'range is tightening after impulse, which suits swing entries');}
 
-  if(pulse.greenShare>=0.66&&pulse.bodyBias>12){continuation+=7;squeeze+=4;addUnique(bullReasons,'buyers are controlling the hourly tape');}
-  if(pulse.rangeExpansion>1.3&&chg>0){continuation+=4;distribution+=6;addUnique(riskReasons,'range is expanding, so upside can continue but failure gets violent');}
-  if(pulse.rangeExpansion<0.82){distribution+=5;addUnique(riskReasons,'range is compressing after the initial burst');}
+  if(pulse.returnFromHigh>10){dump+=14;continuation-=8;squeeze+=10;addUnique(bearReasons,'price is already far below the recent high');}
+  else if(pulse.returnFromHigh<4&&pulse.last3Change>1.2){continuation+=9;swing+=4;addUnique(bullReasons,'pullbacks are staying shallow near the highs');}
+
+  if(pulse.last3Change<-4){dump+=12;squeeze+=11;continuation-=8;addUnique(trapReasons,'the last few hours already flushed hard');}
+  if(pulse.last3Change>4&&fr>0.03){squeeze+=10;dump+=4;addUnique(trapReasons,'late longs can get trapped after a fast push');}
 
   if(spot){
-    if(spotChg>4&&spotChg<18){continuation+=8;addUnique(bullReasons,'spot demand is confirming the perp');}
-    else if(spotChg>=18){distribution+=10;continuation-=3;addUnique(riskReasons,'spot already looks stretched');}
-    else if(spotChg<=-4){distribution+=11;continuation-=8;addUnique(bearReasons,'spot is not backing the futures move');}
+    if(spotChg>4&&spotChg<18){continuation+=7;swing+=5;addUnique(bullReasons,'spot demand is confirming the perp');}
+    else if(spotChg>=18){dump+=9;squeeze+=7;continuation-=3;addUnique(riskReasons,'spot already looks stretched');}
+    else if(spotChg<=-4){dump+=11;continuation-=8;swing-=5;addUnique(bearReasons,'spot is not backing the futures tape');}
+    if(Math.abs(spotBasis)<=0.8){swing+=7;addUnique(swingReasons,'perp basis is tame enough for cleaner holds');}
+    else if(spotBasis>1.8){squeeze+=10;dump+=5;swing-=6;addUnique(trapReasons,'perp premium shows crowded chasing');}
   }else{
-    distribution+=6;continuation-=3;addUnique(riskReasons,'there is no spot pair to confirm real demand');
+    dump+=6;continuation-=3;swing-=6;addUnique(riskReasons,'there is no spot pair to confirm real demand');
   }
 
-  if(fr>0.08){distribution+=16;squeeze-=6;continuation-=8;addUnique(riskReasons,'funding is too hot and longs look crowded');}
-  else if(fr>0.04){distribution+=9;continuation-=4;addUnique(riskReasons,'funding is getting crowded');}
-  else if(fr<-0.025){squeeze+=16;continuation+=5;addUnique(bullReasons,'negative funding leaves room for a squeeze');}
+  if(fr>0.08){dump+=14;squeeze+=15;continuation-=10;swing-=8;addUnique(trapReasons,'funding is too hot and late longs are crowded');}
+  else if(fr>0.04){dump+=8;squeeze+=8;continuation-=4;addUnique(riskReasons,'funding is getting crowded');}
+  else if(fr<-0.025){continuation+=5;squeeze+=14;swing+=4;addUnique(trapReasons,'negative funding leaves room for a squeeze snapback');}
 
-  if(oiPulse>8&&chg>0){continuation+=6;distribution+=3;squeeze+=7;addUnique(bullReasons,'open interest is building with price');}
-  else if(oiPulse<-8){distribution+=9;squeeze-=4;addUnique(riskReasons,'open interest is already flushing out');}
+  if(oiPulse>8&&chg>0){continuation+=6;squeeze+=7;addUnique(bullReasons,'open interest is still building with price');}
+  else if(oiPulse>8&&chg<0){dump+=11;squeeze+=8;addUnique(bearReasons,'open interest is building into a red tape');}
+  else if(oiPulse<-8){dump+=8;swing+=5;squeeze-=4;addUnique(riskReasons,'open interest is already flushing out');}
 
-  if(chg>=18){distribution+=13;continuation-=2;squeeze+=5;addUnique(riskReasons,'the daily move is already very extended');}
-  else if(chg<=-10){distribution+=14;continuation-=10;squeeze+=6;addUnique(bearReasons,'the market is already accepting lower prices');}
+  if(chg>=18){dump+=12;squeeze+=8;continuation-=2;swing-=7;addUnique(riskReasons,'the daily move is already extended');}
+  else if(chg>=8&&chg<=14&&pulse.closePosition>0.65){continuation+=6;swing+=5;}
+  else if(chg<=-10){dump+=16;squeeze+=6;continuation-=10;addUnique(bearReasons,'the market is already accepting lower prices');}
 
-  continuation=aiClamp(Math.round(continuation),8,96);
-  distribution=aiClamp(Math.round(distribution),6,95);
-  squeeze=aiClamp(Math.round(squeeze),5,95);
+  if(ageDays<=2){continuation+=6;squeeze+=10;addUnique(trapReasons,'first 48h listings can rip and reverse brutally');}
+  else if(ageDays>=3&&ageDays<=7){dump+=10;swing+=7;addUnique(swingReasons,'day 3-7 is where clean holds matter most');}
+  else if(ageDays>10){dump+=6;continuation-=4;swing+=3;}
 
-  var net=continuation-distribution;
+  if(dump<48&&continuation>62&&pulse.pullbackDepth<8&&fr<0.05&&volTrend!=='decreasing')swing+=12;
+  if(dump>64||squeeze>70)swing-=10;
+
+  continuation=aiClamp(Math.round(continuation),6,96);
+  dump=aiClamp(Math.round(dump),6,96);
+  squeeze=aiClamp(Math.round(squeeze),5,96);
+  swing=aiClamp(Math.round(swing),5,96);
+
   var verdict='neutral';
-  if(net>=12&&continuation>=58)verdict='pump';
-  else if(net<=-10||distribution>=68)verdict='dump';
+  if(continuation>=66&&dump<58)verdict='pump';
+  else if(dump>=66||(dump-continuation)>=12)verdict='dump';
+
+  var primary=pickPrimarySetup({continuation_score:continuation,dump_score:dump,squeeze_trap_score:squeeze,swing_entry_score:swing});
+  if(verdict==='pump'&&continuation<62&&primary==='continuation')primary='swing';
+  if(verdict==='dump'&&squeeze>dump&&squeeze>=70)primary='squeeze';
 
   var reasoning='';
-  if(verdict==='pump')reasoning='Opinionated read: continuation still has the edge. '+(bullReasons.slice(0,3).join(', ')||'The tape is still constructive')+'.';
-  else if(verdict==='dump')reasoning='Opinionated read: this looks more like distribution than healthy continuation. '+(bearReasons.slice(0,3).join(', ')||riskReasons.slice(0,2).join(', ')||'The tape is losing quality')+'.';
-  else reasoning='Opinionated read: this is in a decision zone, not a clean chase. '+((bullReasons[0]||'there is still some demand')+' but '+(riskReasons[0]||bearReasons[0]||'distribution risk is no longer trivial'))+'.';
+  if(primary==='continuation')reasoning='Continuation bias: '+(bullReasons.slice(0,3).join(', ')||'the tape is still acting constructive')+'.';
+  else if(primary==='dump')reasoning='Dump bias: '+(bearReasons.slice(0,3).join(', ')||riskReasons.slice(0,2).join(', ')||'the listing is losing quality')+'.';
+  else if(primary==='squeeze')reasoning='Trap bias: '+(trapReasons.slice(0,3).join(', ')||'crowding and fast tape shifts make this a squeeze setup')+'.';
+  else reasoning='Swing bias: '+(swingReasons.slice(0,3).join(', ')||'the structure is only attractive on controlled entries, not on chase')+'.';
 
-  if(ageDays>=3&&ageDays<=7)reasoning+=' That day 3-7 window matters most here: if it cannot hold strength now, it usually turns into chop or distribution rather than a second clean leg.';
-  else if(ageDays<=2)reasoning+=' Very fresh listings can stay irrational longer, so squeezes and trend extensions both hit harder in the first 48h.';
+  if(ageDays>=3&&ageDays<=7)reasoning+=' Day 3-7 still matters most here: that is where real continuation separates from post-listing distribution.';
+  else if(ageDays<=2)reasoning+=' Fresh listings stay irrational longer, so size and timing matter more than conviction alone.';
 
-  var bullCase='If dips stay shallow, spot keeps confirming, and funding does not overheat, this can still print another continuation leg.';
-  var bearCase='If range expansion stops producing higher closes, the same fast money that pushed it up usually turns into distribution just as quickly.';
-  var tradeAngle='Prefer reacting to structure: buy controlled pullbacks or tight bases when continuation wins, and fade failed reclaims when distribution starts taking over.';
+  var bullCase='Buy only if dips stay controlled, spot confirms, and closes remain near the highs.';
+  var bearCase='If rebounds lose steam and spot stops confirming, post-listing supply usually takes over fast.';
+  var tradeAngle='React to structure, not emotion.';
 
-  if(verdict==='dump'){
-    bullCase='A sharp reclaim with improving closes and better spot confirmation would be the only clean way to invalidate the bearish read.';
-    bearCase='Weak bounces inside day 3-7 often become distribution traps, especially when funding stays warm and volume fades.';
-    tradeAngle='Do not short the hole blindly; wait for a failed bounce or a clearly weak reclaim, because fresh listings still squeeze hard.';
-  } else if(verdict==='neutral'){
-    bullCase='A cleaner base plus strong closes near the highs would push this back into continuation mode.';
-    bearCase='One more weak rejection with fading turnover likely shifts it from watchlist material into active distribution.';
-    tradeAngle='This is a wait-for-proof setup. The clean trade is after confirmation, not before.';
+  if(primary==='continuation'){
+    tradeAngle='Preferred style: buy first clean pullback, hold only while closes stay strong and funding stays manageable.';
+  }else if(primary==='dump'){
+    tradeAngle='Preferred style: wait for a bounce into weakness or a failed reclaim; avoid shorting the hole blindly.';
+  }else if(primary==='squeeze'){
+    tradeAngle='Preferred style: do not pre-empt. Wait for the trap move, then react only after rejection or reclaim confirms.';
+    bullCase='A squeeze can overshoot hard if funding stays skewed and weak shorts or late longs are trapped.';
+  }else if(primary==='swing'){
+    tradeAngle='Preferred style: swing only on tight structure, shallow pullback, and acceptable funding/basis. Skip noisy breakouts.';
+    bullCase='This becomes attractive only if the base stays tight and buyers defend mid-range dips.';
+    bearCase='If the base breaks and volume fades, it falls back into watchlist or dump territory.';
   }
 
   return {
     verdict:verdict,
     continuation_probability:continuation,
     continuation_score:continuation,
-    distribution_score:distribution,
+    dump_score:dump,
+    distribution_score:dump,
+    squeeze_trap_score:squeeze,
     squeeze_risk_score:squeeze,
+    swing_entry_score:swing,
     listing_phase:profile.label,
     age_days:ageDays,
+    primary_setup:primary,
+    recommended_style:styleLabel({primary_setup:primary}),
     reasoning:reasoning,
     bull_case:bullCase,
     bear_case:bearCase,
@@ -347,27 +430,30 @@ function loadAIForAll(){
         coin.aiLoading=false;
         rd();
       });
-    },idx*800);
+    },idx*250);
   });
 }
 
 function lUp(){S.lu=true;S.eu=null;rd();return fUp().then(function(u){S.up=u;}).catch(function(e){S.eu=e.message;}).then(function(){S.lu=false;rd();});}
-function loadAll(){var b=document.getElementById('rb');if(b)b.classList.add('spinning');aiCache={};return Promise.all([lNL(),lUp()]).then(function(){var el=document.getElementById('lu');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var b2=document.getElementById('rb');if(b2)b2.classList.remove('spinning');});}
-
-function fp(n){var v=parseFloat(n);if(!v)return'--';if(v>=1000)return'$'+v.toLocaleString('en',{maximumFractionDigits:0});if(v>=1)return'$'+v.toFixed(3);return'$'+v.toPrecision(4);}
-function fv(n){var v=parseFloat(n);if(!v)return'--';if(v>=1e9)return'$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return'$'+(v/1e6).toFixed(0)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(0)+'K';return'$'+v.toFixed(0);}
-function vc(v){return v==='pump'?'var(--pump)':v==='dump'?'var(--dump)':'var(--neutral)';}
-function sb(v,c){var p=Math.round(v);return '<div class="bar-track"><div class="bar-fill" style="width:'+p+'%;background:'+c+'"></div></div><span class="bar-val">'+p+'</span>';}
+function loadAll(){var b=document.getElementById('rb');if(b)b.classList.add('spinning');aiCache={};return Promise.all([lNL(),lUp()]).then(function(){var el=document.getElementById('lu');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var b2=document.getElementById('rb');if(b2)b2.classList.remove('spinning');}).catch(function(){var b3=document.getElementById('rb');if(b3)b3.classList.remove('spinning');});}
 
 function renderFlags(flags){
   var h='<div class="signal-flags">';
-  for(var i=0;i<flags.length;i++){h+='<span class="flag '+flags[i].type+'">'+flags[i].text+'</span>';}
+  for(var i=0;i<flags.length;i++)h+='<span class="flag '+flags[i].type+'">'+flags[i].text+'</span>';
   return h+'</div>';
 }
-
 function renderAIScore(label,val,color,mode){
   var v=Math.round(val||0);
   return '<div class="ai-score"><div class="ai-score-lbl">'+label+'</div><div class="ai-score-val" style="color:'+color+'">'+v+'</div><div class="ai-score-sub">'+scoreLabel(v,mode)+'</div><div class="ai-mini-bar"><div class="ai-mini-fill" style="width:'+v+'%;background:'+color+'"></div></div></div>';
+}
+function renderModeLine(ai){
+  if(!ai)return '';
+  var primary=ai.primary_setup||'continuation';
+  var h='<div class="mode-line">';
+  h+='<span class="mode-pill primary '+setupClass(primary)+'">'+setupLabel(primary)+'</span>';
+  h+='<span class="mode-pill">STYLE: '+(ai.recommended_style||'React only').toUpperCase()+'</span>';
+  h+='</div>';
+  return h;
 }
 function renderAI(coin){
   if(coin.aiLoading)return '<div class="ai-section"><div class="ai-loading"><div class="ai-spinner"></div>Running local analyst...</div></div>';
@@ -376,20 +462,26 @@ function renderAI(coin){
   var prob=ai.continuation_probability||50;
   var vd=ai.verdict||coin.a.vd;
   var probColor=prob>=65?'var(--pump)':prob<=40?'var(--dump)':'var(--neutral)';
-  var distColor=(ai.distribution_score||0)>=65?'var(--dump)':'var(--neutral)';
-  var sqColor=(ai.squeeze_risk_score||0)>=65?'var(--accent2)':(ai.squeeze_risk_score||0)>=45?'var(--neutral)':'var(--pump)';
+  var dumpScore=ai.dump_score||ai.distribution_score||50;
+  var squeezeScore=ai.squeeze_trap_score||ai.squeeze_risk_score||50;
+  var swingScore=ai.swing_entry_score||50;
+  var distColor=dumpScore>=65?'var(--dump)':'var(--neutral)';
+  var sqColor=squeezeScore>=65?'var(--accent2)':squeezeScore>=45?'var(--neutral)':'var(--pump)';
+  var swingColor=swingScore>=65?'var(--neutral)':swingScore>=45?'var(--text)':'var(--muted2)';
   var h='<div class="ai-section">';
   h+='<div class="ai-header"><span class="ai-label">Scout Analysis</span><span class="ai-prob" style="color:'+probColor+'">'+prob+'/100 continuation</span></div>';
   h+='<div class="prob-bar"><div class="prob-fill" style="width:'+prob+'%;background:'+probColor+'"></div></div>';
   h+='<div class="prob-labels"><span>DISTRIBUTION</span><span>WATCH</span><span>CONTINUE</span></div>';
   h+='<div class="ai-body" style="margin-top:10px">';
-  h+='<div style="margin-bottom:8px;color:var(--text);font-style:normal">'+ai.reasoning+'</div>';
+  h+=renderModeLine(ai);
+  h+='<div style="margin-top:8px;margin-bottom:8px;color:var(--text);font-style:normal">'+ai.reasoning+'</div>';
   h+='<div class="ai-score-grid">';
-  h+=renderAIScore('continue',ai.continuation_score||prob,probColor,'score');
-  h+=renderAIScore('distribution',ai.distribution_score||50,distColor,'risk');
-  h+=renderAIScore('squeeze risk',ai.squeeze_risk_score||50,sqColor,'risk');
+  h+=renderAIScore('continuation',ai.continuation_score||prob,probColor,'score');
+  h+=renderAIScore('dump',dumpScore,distColor,'risk');
+  h+=renderAIScore('squeeze trap',squeezeScore,sqColor,'risk');
+  h+=renderAIScore('swing entry',swingScore,swingColor,'score');
   h+='</div>';
-  h+='<div class="ai-meta"><span class="ai-meta-pill">'+(ai.listing_phase||'LISTING')+'</span><span class="ai-meta-pill">'+(ai.age_days||0)+'D OLD</span><span class="ai-meta-pill">'+(vd==='pump'?'LEAN LONG':vd==='dump'?'LEAN SHORT':'WAIT/PROVE')+'</span></div>';
+  h+='<div class="ai-meta"><span class="ai-meta-pill">'+(ai.listing_phase||'LISTING')+'</span><span class="ai-meta-pill">'+(ai.age_days||0)+'D OLD</span><span class="ai-meta-pill">'+setupLabel(ai.primary_setup||'continuation')+'</span><span class="ai-meta-pill">'+(vd==='pump'?'LEAN LONG':vd==='dump'?'LEAN SHORT':'WAIT/PROVE')+'</span></div>';
   if(ai.bull_case)h+='<div style="color:var(--pump);margin-top:10px;margin-bottom:4px">&#9650; '+ai.bull_case+'</div>';
   if(ai.bear_case)h+='<div style="color:var(--dump);margin-bottom:4px">&#9660; '+ai.bear_case+'</div>';
   if(ai.trade_angle)h+='<div style="color:var(--accent2);margin-top:6px;font-style:normal;border-top:1px solid var(--border);padding-top:6px">&#9658; '+ai.trade_angle+'</div>';
@@ -398,10 +490,11 @@ function renderAI(coin){
 }
 
 function gVerdict(coin){return coin.aiData&&coin.aiData.verdict?coin.aiData.verdict:coin.a.vd;}
+function gMode(coin){return coin.aiData&&coin.aiData.primary_setup?coin.aiData.primary_setup:'continuation';}
 
 function rCC(coin){
   var sym=coin.sym,t=coin.t,a=coin.a,ot=coin.ot;
-  var vd=gVerdict(coin),cf=a.cf,sc=a.sc,mom=a.mom,vol=a.vol,tr=a.tr,act=a.act;
+  var vd=gVerdict(coin),sc=a.sc,mom=a.mom,vol=a.vol,tr=a.tr,act=a.act;
   var sh=sym.replace('USDT',''),chg=parseFloat(t.priceChangePercent||0);
   var cc=chg>0?'up':chg<0?'down':'def',cs=(chg>0?'+':'')+chg.toFixed(2)+'%';
   var ag=Math.round((Date.now()-ot)/864e5),col=vc(vd);
@@ -434,7 +527,35 @@ function rCC(coin){
 
 function rUC(item){var now=Date.now(),diff=item.listDate?item.listDate-now:null,ts,tl;if(diff===null){ts='TBA';tl='unconfirmed';}else if(diff<0){ts='Listed';tl='recently';}else if(diff<36e5){ts=Math.floor(diff/6e4)+'m';tl='until listing';}else if(diff<864e5){ts=Math.floor(diff/36e5)+'h '+Math.floor((diff%36e5)/6e4)+'m';tl='until listing';}else{ts=Math.ceil(diff/864e5)+'d';tl='until listing';}return '<div class="upcoming-card"><div class="upc-left"><div class="upc-sym">'+item.symbol+' <span class="new-badge">NEW</span></div><div class="upc-desc">'+item.title+'</div></div><div class="upc-time"><div class="time-val">'+ts+'</div><div class="time-lbl">'+tl+'</div></div></div>';}
 
-function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.f==='all'?S.nc:S.nc.filter(function(c){return gVerdict(c)===S.f;});var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length,du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length,ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(&apos;new&apos;)">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(&apos;upcoming&apos;)">Upcoming</div></div>';if(S.tab==='new'){if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div><div class="filter-row"><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(&apos;all&apos;)">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(&apos;pump&apos;)">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(&apos;dump&apos;)">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(&apos;neutral&apos;)">&#9670; Watch</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{if(S.lu){h+='<div class="loading-row"><div class="spinner"></div>Fetching...</div>';}else if(S.eu){h+='<div class="err">Error: '+S.eu+'</div>';}else if(S.up.length===0){h+='<div class="inf">No upcoming listings found.</div>';}else{for(var i=0;i<S.up.length;i++)h+=rUC(S.up[i]);}}app.innerHTML=h;}
+function rd(){
+  var app=document.getElementById('app');if(!app)return;
+  var fl=S.nc;
+  if(S.f!=='all'){
+    fl=S.nc.filter(function(c){
+      if(S.f==='pump'||S.f==='dump'||S.f==='neutral')return gVerdict(c)===S.f;
+      if(S.f==='postdump')return gMode(c)==='dump';
+      return gMode(c)===S.f;
+    });
+  }
+  var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length;
+  var du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length;
+  var ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;
+  var ct=S.nc.filter(function(c){return gMode(c)==='continuation';}).length;
+  var dp=S.nc.filter(function(c){return gMode(c)==='dump';}).length;
+  var sq=S.nc.filter(function(c){return gMode(c)==='squeeze';}).length;
+  var sw=S.nc.filter(function(c){return gMode(c)==='swing';}).length;
+  var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(\'new\')">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(\'upcoming\')">Upcoming</div></div>';
+  if(S.tab==='new'){
+    if(!S.ln&&S.nc.length>0){
+      h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot accent"></div><span class="summary-num" style="color:var(--accent2)">'+sq+'</span><span class="summary-txt">traps</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div>';
+      h+='<div class="filter-row"><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(\'all\')">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(\'pump\')">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(\'dump\')">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(\'neutral\')">&#9670; Watch</div><div class="chip pump '+(S.f==='continuation'?'active':'')+'" onclick="sf(\'continuation\')">Continue '+ct+'</div><div class="chip dump '+(S.f==='postdump'?'active':'')+'" onclick="sf(\'postdump\')">Post-dump '+dp+'</div><div class="chip accent '+(S.f==='squeeze'?'active':'')+'" onclick="sf(\'squeeze\')">Trap '+sq+'</div><div class="chip neutral '+(S.f==='swing'?'active':'')+'" onclick="sf(\'swing\')">Swing '+sw+'</div></div>';
+    }
+    if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}
+  }else{
+    if(S.lu){h+='<div class="loading-row"><div class="spinner"></div>Fetching...</div>';}else if(S.eu){h+='<div class="err">Error: '+S.eu+'</div>';}else if(S.up.length===0){h+='<div class="inf">No upcoming listings found.</div>';}else{for(var j=0;j<S.up.length;j++)h+=rUC(S.up[j]);}
+  }
+  app.innerHTML=h;
+}
 function st(t){S.tab=t;rd();}
 function sf(f){S.f=f;rd();}
 loadAll();
