@@ -65,6 +65,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .ai-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);font-family:var(--mono)}
 .ai-prob{font-size:13px;font-weight:700;font-family:var(--mono)}
 .ai-body{font-size:12px;color:var(--muted2);line-height:1.6;background:var(--surface3);border-radius:10px;padding:10px 12px}
+.ai-score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;margin-bottom:10px}
+.ai-score{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:8px 9px}
+.ai-score-lbl{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px}
+.ai-score-val{font-size:15px;font-weight:700;font-family:var(--mono);line-height:1}
+.ai-score-sub{font-size:10px;color:var(--muted2);font-family:var(--mono);margin-top:4px}
+.ai-mini-bar{height:4px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin-top:7px}
+.ai-mini-fill{height:100%;border-radius:4px}
+.ai-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ai-meta-pill{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted2)}
 .ai-loading{font-size:12px;color:var(--muted);font-family:var(--mono);font-style:italic;padding:8px 0;display:flex;align-items:center;gap:8px}
 .ai-spinner{width:12px;height:12px;border:1.5px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
 .signal-flags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
@@ -120,33 +129,45 @@ function az(o){var chg=parseFloat(o.priceChangePercent)||0,vol=parseFloat(o.quot
 
 function buildFlags(coin){
   var flags=[];
-  var t=coin.t,a=coin.a,spot=coin.spot,fr=coin.fr;
+  var t=coin.t,a=coin.a,spot=coin.spot,fr=parseFloat(coin.fr||0);
   var chg=parseFloat(t.priceChangePercent||0);
   var vol=parseFloat(t.quoteVolume||0);
-  var ageDays=Math.round((Date.now()-coin.ot)/864e5);
+  var ageDays=Math.max(0,Math.round((Date.now()-coin.ot)/864e5));
+  var profile=getListingProfile(ageDays);
+  var pulse=getCandlePulse(coin);
+  var oiPulse=getOiPulse(coin);
+
+  flags.push({type:'info',text:profile.label});
 
   if(spot){
     flags.push({type:'info',text:'SPOT LISTED'});
     var spotChg=parseFloat(spot.priceChangePercent||0);
-    if(spotChg>5&&spotChg<20)flags.push({type:'bull',text:'SPOT GRIND UP'});
-    if(spotChg>20)flags.push({type:'warn',text:'SPOT OVEREXTENDED'});
-    if(spotChg<-5)flags.push({type:'bear',text:'SPOT WEAKENING'});
+    if(spotChg>4&&spotChg<18)flags.push({type:'bull',text:'SPOT CONFIRMS'});
+    if(spotChg>18)flags.push({type:'warn',text:'SPOT STRETCHED'});
+    if(spotChg<-4)flags.push({type:'bear',text:'SPOT NOT CONFIRMING'});
   }else{flags.push({type:'warn',text:'NO SPOT PAIR'});}
 
-  if(chg>10)flags.push({type:'warn',text:'VERTICAL PUMP'});
-  else if(chg>3)flags.push({type:'bull',text:'MOMENTUM UP'});
-  else if(chg<-5)flags.push({type:'bear',text:'SELLING PRESSURE'});
+  if(chg>=14)flags.push({type:'warn',text:'VERTICAL DAY'});
+  else if(chg>=5)flags.push({type:'bull',text:'DAY-2 FOLLOW THROUGH'});
+  else if(chg<=-8)flags.push({type:'bear',text:'HEAVY SELL PRESSURE'});
 
-  if(vol>50e6)flags.push({type:'bull',text:'HIGH VOLUME'});
-  else if(vol<2e6)flags.push({type:'bear',text:'LOW VOLUME'});
+  if(vol>60e6)flags.push({type:'bull',text:'HEAVY TURNOVER'});
+  else if(vol<3e6)flags.push({type:'bear',text:'THIN TURNOVER'});
+
+  if(pulse.rangeExpansion>1.35)flags.push({type:'bull',text:'RANGE EXPANDING'});
+  if(pulse.rangeCompression<0.75)flags.push({type:'warn',text:'RANGE TIGHTENING'});
+  if(pulse.closePosition>0.72)flags.push({type:'bull',text:'HOURLY CLOSES NEAR HIGHS'});
+  if(pulse.closePosition<0.34)flags.push({type:'bear',text:'HOURLY CLOSES WEAK'});
+
+  if(oiPulse>10)flags.push({type:'bull',text:'OI BUILDING'});
+  if(oiPulse<-10)flags.push({type:'warn',text:'OI FLUSHING'});
 
   if(fr>0.05)flags.push({type:'warn',text:'FUNDING +'+fr.toFixed(3)+'%'});
   else if(fr<-0.02)flags.push({type:'bull',text:'NEG FUNDING'});
 
-  if(ageDays<=3)flags.push({type:'bull',text:'FRESH LISTING'});
   if(a.tr>70)flags.push({type:'bull',text:'UPTREND'});
   if(a.tr<35)flags.push({type:'bear',text:'DOWNTREND'});
-  if(a.mom>75)flags.push({type:'warn',text:'OVERCROWDED LONGS'});
+  if(a.mom>78)flags.push({type:'warn',text:'LONGS CROWDED'});
 
   return flags;
 }
@@ -161,94 +182,143 @@ function aiVolTrend(coin){
   for(var j=kl.length-6;j<kl.length;j++)lateVol+=parseFloat(kl[j][5]||0);
   return lateVol>earlyVol*1.3?'increasing':lateVol<earlyVol*0.7?'decreasing':'flat';
 }
+function getListingProfile(ageDays){
+  if(ageDays<=2)return{phase:'discovery',label:'DISCOVERY WINDOW',boost:9,risk:7};
+  if(ageDays<=4)return{phase:'price-discovery',label:'PRICE DISCOVERY',boost:12,risk:11};
+  if(ageDays<=7)return{phase:'decision-zone',label:'DAY 3-7 DECISION',boost:10,risk:15};
+  if(ageDays<=14)return{phase:'post-hype',label:'POST-HYPE CHECK',boost:2,risk:18};
+  return{phase:'mature',label:'LATE LISTING',boost:-4,risk:14};
+}
+function getCandlePulse(coin){
+  var kl=coin.kl||[];
+  var out={bodyBias:0,closePosition:0.5,rangeExpansion:1,rangeCompression:1,greenShare:0};
+  if(kl.length<8)return out;
+  var recent=kl.slice(-6),older=kl.slice(-12,-6),green=0,bodySum=0,rangeSum=0,olderRange=0,closePos=0;
+  for(var i=0;i<recent.length;i++){
+    var o=parseFloat(recent[i][1]||0),h=parseFloat(recent[i][2]||0),l=parseFloat(recent[i][3]||0),c=parseFloat(recent[i][4]||0);
+    var range=Math.max(h-l,1e-9);
+    if(c>o)green++;
+    bodySum+=((c-o)/range)*100;
+    rangeSum+=range;
+    closePos+=(c-l)/range;
+  }
+  for(var j=0;j<older.length;j++)olderRange+=Math.max(parseFloat(older[j][2]||0)-parseFloat(older[j][3]||0),1e-9);
+  out.bodyBias=bodySum/recent.length;
+  out.closePosition=closePos/recent.length;
+  out.greenShare=green/recent.length;
+  out.rangeExpansion=olderRange>0?(rangeSum/recent.length)/(olderRange/older.length):1;
+  out.rangeCompression=out.rangeExpansion;
+  return out;
+}
+function getOiPulse(coin){
+  var oi=parseFloat(coin.oi||0),vol=parseFloat((coin.t&&coin.t.quoteVolume)||0);
+  if(!oi||!vol)return 0;
+  return aiClamp(((Math.log(oi+1)/Math.LN10)*18)+((vol>0?Math.log(vol+1)/Math.LN10:0)*3)-55,-25,25);
+}
+function addUnique(list,text){if(text&&list.indexOf(text)===-1)list.push(text);}
+function scoreLabel(v,mode){
+  if(mode==='risk')return v>=72?'HIGH':v>=55?'ELEVATED':v>=40?'MED':'LOW';
+  return v>=70?'STRONG':v>=55?'LEAN':v>=40?'MIXED':'WEAK';
+}
 function buildLocalAnalysis(coin){
   var t=coin.t,a=coin.a,spot=coin.spot;
-  var ageDays=Math.round((Date.now()-coin.ot)/864e5);
+  var ageDays=Math.max(0,Math.round((Date.now()-coin.ot)/864e5));
   var chg=parseFloat(t.priceChangePercent||0);
   var fr=parseFloat(coin.fr||0);
   var vol=parseFloat(t.quoteVolume||0);
-  var oi=parseFloat(coin.oi||0);
   var volTrend=aiVolTrend(coin);
-  var flags=buildFlags(coin).map(function(f){return f.text;});
-  var bias=a.sc-50;
-  var reasons=[];
-  var risks=[];
+  var profile=getListingProfile(ageDays);
+  var pulse=getCandlePulse(coin);
+  var oiPulse=getOiPulse(coin);
+  var continuation=48+profile.boost;
+  var distribution=22+profile.risk;
+  var squeeze=26;
+  var bullReasons=[];
+  var bearReasons=[];
+  var riskReasons=[];
+  var spotChg=spot?parseFloat(spot.priceChangePercent||0):null;
 
-  if(a.tr>68){bias+=8;reasons.push('trend is strong');}
-  else if(a.tr<35){bias-=8;reasons.push('trend is weak');}
+  if(a.tr>68){continuation+=14;addUnique(bullReasons,'trend is still lifting instead of rolling over');}
+  else if(a.tr<38){distribution+=16;addUnique(bearReasons,'trend already looks broken');}
 
-  if(a.mom>72){bias+=7;reasons.push('momentum is still pressing higher');}
-  else if(a.mom<35){bias-=7;reasons.push('momentum is fading');}
+  if(a.mom>74&&chg>0){continuation+=11;distribution+=4;addUnique(bullReasons,'momentum is still printing follow-through');}
+  else if(a.mom<40||chg<-4){distribution+=12;continuation-=8;addUnique(bearReasons,'momentum is fading fast');}
 
-  if(volTrend==='increasing'){bias+=5;reasons.push('volume is building instead of drying up');}
-  else if(volTrend==='decreasing'){bias-=6;risks.push('volume is fading');}
+  if(volTrend==='increasing'){continuation+=8;squeeze+=5;addUnique(bullReasons,'volume is expanding into the move');}
+  else if(volTrend==='decreasing'){distribution+=10;continuation-=6;addUnique(riskReasons,'volume is drying up');}
 
-  if(vol>5e7){bias+=4;reasons.push('liquidity is strong enough for follow-through');}
-  else if(vol<2e6){bias-=5;risks.push('liquidity is thin');}
+  if(vol>6e7){continuation+=7;squeeze+=4;addUnique(bullReasons,'turnover is strong enough for another leg');}
+  else if(vol<3e6){distribution+=11;continuation-=7;addUnique(riskReasons,'liquidity is thin for a fresh listing');}
 
-  if(ageDays<=3){bias+=4;reasons.push('it is still in the fresh-listing phase');}
-  else if(ageDays>=14){bias-=3;risks.push('the initial listing impulse may be maturing');}
+  if(ageDays<=2){continuation+=8;squeeze+=9;addUnique(bullReasons,'it is still inside the first discovery burst');}
+  else if(ageDays<=4){continuation+=10;distribution+=6;squeeze+=7;addUnique(bullReasons,'day 2-4 listings often trend hardest if they hold');}
+  else if(ageDays<=7){continuation+=5;distribution+=12;squeeze+=3;addUnique(riskReasons,'day 3-7 is where real distribution often starts');}
+  else if(ageDays>10){distribution+=8;continuation-=4;addUnique(bearReasons,'the easy listing impulse is mostly gone');}
+
+  if(pulse.closePosition>0.72){continuation+=8;addUnique(bullReasons,'recent candles are closing near their highs');}
+  else if(pulse.closePosition<0.36){distribution+=10;continuation-=5;addUnique(bearReasons,'recent candles keep closing weak');}
+
+  if(pulse.greenShare>=0.66&&pulse.bodyBias>12){continuation+=7;squeeze+=4;addUnique(bullReasons,'buyers are controlling the hourly tape');}
+  if(pulse.rangeExpansion>1.3&&chg>0){continuation+=4;distribution+=6;addUnique(riskReasons,'range is expanding, so upside can continue but failure gets violent');}
+  if(pulse.rangeExpansion<0.82){distribution+=5;addUnique(riskReasons,'range is compressing after the initial burst');}
 
   if(spot){
-    var spotChg=parseFloat(spot.priceChangePercent||0);
-    if(spotChg>5&&spotChg<20){bias+=4;reasons.push('spot is grinding up with the perp');}
-    if(spotChg>20){bias-=5;risks.push('spot already looks overheated');}
-    if(spotChg<-5){bias-=5;risks.push('spot is not confirming the perp move');}
-  } else {
-    bias-=2;
-    risks.push('there is no spot pair to validate demand');
+    if(spotChg>4&&spotChg<18){continuation+=8;addUnique(bullReasons,'spot demand is confirming the perp');}
+    else if(spotChg>=18){distribution+=10;continuation-=3;addUnique(riskReasons,'spot already looks stretched');}
+    else if(spotChg<=-4){distribution+=11;continuation-=8;addUnique(bearReasons,'spot is not backing the futures move');}
+  }else{
+    distribution+=6;continuation-=3;addUnique(riskReasons,'there is no spot pair to confirm real demand');
   }
 
-  if(fr>0.05){bias-=8;risks.push('funding is crowded on the long side');}
-  else if(fr<-0.02){bias+=4;reasons.push('negative funding gives room for upside squeeze');}
+  if(fr>0.08){distribution+=16;squeeze-=6;continuation-=8;addUnique(riskReasons,'funding is too hot and longs look crowded');}
+  else if(fr>0.04){distribution+=9;continuation-=4;addUnique(riskReasons,'funding is getting crowded');}
+  else if(fr<-0.025){squeeze+=16;continuation+=5;addUnique(bullReasons,'negative funding leaves room for a squeeze');}
 
-  if(flags.indexOf('VERTICAL PUMP')!==-1){bias-=10;risks.push('the move already looks vertical');}
-  if(flags.indexOf('OVERCROWDED LONGS')!==-1){bias-=7;risks.push('late longs are probably crowded');}
-  if(flags.indexOf('SELLING PRESSURE')!==-1){bias-=7;reasons.push('recent price action is under pressure');}
-  if(flags.indexOf('DOWNTREND')!==-1){bias-=6;reasons.push('structure is leaning lower');}
-  if(flags.indexOf('UPTREND')!==-1){bias+=5;reasons.push('structure is still pointing up');}
-  if(flags.indexOf('HIGH VOLUME')!==-1){bias+=3;reasons.push('participation is elevated');}
-  if(flags.indexOf('LOW VOLUME')!==-1){bias-=4;risks.push('follow-through may be weak');}
+  if(oiPulse>8&&chg>0){continuation+=6;distribution+=3;squeeze+=7;addUnique(bullReasons,'open interest is building with price');}
+  else if(oiPulse<-8){distribution+=9;squeeze-=4;addUnique(riskReasons,'open interest is already flushing out');}
 
-  if(oi>0&&a.act>65&&chg>0){bias+=3;reasons.push('open interest/activity suggest the move still has participation');}
-  if(chg<-5){bias-=5;reasons.push('the tape already favors downside continuation');}
+  if(chg>=18){distribution+=13;continuation-=2;squeeze+=5;addUnique(riskReasons,'the daily move is already very extended');}
+  else if(chg<=-10){distribution+=14;continuation-=10;squeeze+=6;addUnique(bearReasons,'the market is already accepting lower prices');}
 
+  continuation=aiClamp(Math.round(continuation),8,96);
+  distribution=aiClamp(Math.round(distribution),6,95);
+  squeeze=aiClamp(Math.round(squeeze),5,95);
+
+  var net=continuation-distribution;
   var verdict='neutral';
-  if(bias>=12)verdict='pump';
-  else if(bias<=-12)verdict='dump';
-
-  var continuation=aiClamp(Math.round(50+Math.abs(bias)*1.8),18,95);
-  if(verdict==='neutral')continuation=aiClamp(Math.round(48+Math.abs(bias)*0.8),25,65);
+  if(net>=12&&continuation>=58)verdict='pump';
+  else if(net<=-10||distribution>=68)verdict='dump';
 
   var reasoning='';
-  if(verdict==='pump'){
-    reasoning='Bullish continuation bias. '+(reasons.slice(0,3).join(', ')||'The listing still has decent momentum')+'. '+(risks[0]?'Main risk: '+risks[0]+'.':'Risk is a late blow-off move if buyers get exhausted.');
-  } else if(verdict==='dump'){
-    reasoning='Bearish/distribution bias. '+(reasons.slice(0,3).join(', ')||'The move is losing quality')+'. '+(risks[0]?'Main risk: '+risks[0]+'.':'Risk is a squeeze against crowded shorts if sellers lose control.');
-  } else {
-    reasoning='Neutral/watch bias. The signals are mixed: '+((reasons[0]||'some support exists')+' but '+(risks[0]||'follow-through is not clean'))+'. Better to wait for expansion or failure confirmation.';
-  }
+  if(verdict==='pump')reasoning='Opinionated read: continuation still has the edge. '+(bullReasons.slice(0,3).join(', ')||'The tape is still constructive')+'.';
+  else if(verdict==='dump')reasoning='Opinionated read: this looks more like distribution than healthy continuation. '+(bearReasons.slice(0,3).join(', ')||riskReasons.slice(0,2).join(', ')||'The tape is losing quality')+'.';
+  else reasoning='Opinionated read: this is in a decision zone, not a clean chase. '+((bullReasons[0]||'there is still some demand')+' but '+(riskReasons[0]||bearReasons[0]||'distribution risk is no longer trivial'))+'.';
 
-  var bullCase='';
-  var bearCase='';
-  var tradeAngle='';
-  if(verdict==='pump'){
-    bullCase='If price holds dips and funding stays manageable, the listing can keep grinding higher before true distribution starts.';
-    bearCase='If the move turns vertical again while volume fades, this can flip into a liquidity event and retrace hard.';
-    tradeAngle='Prefer buy-the-dip or tight consolidation breaks, not random chasing after a large green candle.';
-  } else if(verdict==='dump'){
-    bullCase='A clean reclaim with improving volume could turn this into a squeeze and invalidate the bearish read.';
-    bearCase='If weak bounces fail and funding/spot do not improve, distribution can continue lower.';
-    tradeAngle='Prefer failed-bounce shorts or breakdown retests, and avoid forcing entries after an extended flush candle.';
-  } else {
-    bullCase='A stable base with improving volume and spot confirmation would turn this into a continuation candidate.';
-    bearCase='If support breaks with fading spot/futures participation, it likely shifts into distribution.';
-    tradeAngle='Wait for either a confirmed breakout with participation or a failed bounce that clearly rolls over.';
+  if(ageDays>=3&&ageDays<=7)reasoning+=' That day 3-7 window matters most here: if it cannot hold strength now, it usually turns into chop or distribution rather than a second clean leg.';
+  else if(ageDays<=2)reasoning+=' Very fresh listings can stay irrational longer, so squeezes and trend extensions both hit harder in the first 48h.';
+
+  var bullCase='If dips stay shallow, spot keeps confirming, and funding does not overheat, this can still print another continuation leg.';
+  var bearCase='If range expansion stops producing higher closes, the same fast money that pushed it up usually turns into distribution just as quickly.';
+  var tradeAngle='Prefer reacting to structure: buy controlled pullbacks or tight bases when continuation wins, and fade failed reclaims when distribution starts taking over.';
+
+  if(verdict==='dump'){
+    bullCase='A sharp reclaim with improving closes and better spot confirmation would be the only clean way to invalidate the bearish read.';
+    bearCase='Weak bounces inside day 3-7 often become distribution traps, especially when funding stays warm and volume fades.';
+    tradeAngle='Do not short the hole blindly; wait for a failed bounce or a clearly weak reclaim, because fresh listings still squeeze hard.';
+  } else if(verdict==='neutral'){
+    bullCase='A cleaner base plus strong closes near the highs would push this back into continuation mode.';
+    bearCase='One more weak rejection with fading turnover likely shifts it from watchlist material into active distribution.';
+    tradeAngle='This is a wait-for-proof setup. The clean trade is after confirmation, not before.';
   }
 
   return {
     verdict:verdict,
     continuation_probability:continuation,
+    continuation_score:continuation,
+    distribution_score:distribution,
+    squeeze_risk_score:squeeze,
+    listing_phase:profile.label,
+    age_days:ageDays,
     reasoning:reasoning,
     bull_case:bullCase,
     bear_case:bearCase,
@@ -295,30 +365,43 @@ function renderFlags(flags){
   return h+'</div>';
 }
 
+function renderAIScore(label,val,color,mode){
+  var v=Math.round(val||0);
+  return '<div class="ai-score"><div class="ai-score-lbl">'+label+'</div><div class="ai-score-val" style="color:'+color+'">'+v+'</div><div class="ai-score-sub">'+scoreLabel(v,mode)+'</div><div class="ai-mini-bar"><div class="ai-mini-fill" style="width:'+v+'%;background:'+color+'"></div></div></div>';
+}
 function renderAI(coin){
-  if(coin.aiLoading)return '<div class="ai-section"><div class="ai-loading"><div class="ai-spinner"></div>Running AI analysis...</div></div>';
+  if(coin.aiLoading)return '<div class="ai-section"><div class="ai-loading"><div class="ai-spinner"></div>Running local analyst...</div></div>';
   if(!coin.aiData)return '';
   var ai=coin.aiData;
   var prob=ai.continuation_probability||50;
   var vd=ai.verdict||coin.a.vd;
-  var col=vc(vd);
   var probColor=prob>=65?'var(--pump)':prob<=40?'var(--dump)':'var(--neutral)';
+  var distColor=(ai.distribution_score||0)>=65?'var(--dump)':'var(--neutral)';
+  var sqColor=(ai.squeeze_risk_score||0)>=65?'var(--accent2)':(ai.squeeze_risk_score||0)>=45?'var(--neutral)':'var(--pump)';
   var h='<div class="ai-section">';
-  h+='<div class="ai-header"><span class="ai-label">Scout Analysis</span><span class="ai-prob" style="color:'+probColor+'">'+prob+'% continuation</span></div>';
+  h+='<div class="ai-header"><span class="ai-label">Scout Analysis</span><span class="ai-prob" style="color:'+probColor+'">'+prob+'/100 continuation</span></div>';
   h+='<div class="prob-bar"><div class="prob-fill" style="width:'+prob+'%;background:'+probColor+'"></div></div>';
-  h+='<div class="prob-labels"><span>DUMP</span><span>NEUTRAL</span><span>PUMP</span></div>';
+  h+='<div class="prob-labels"><span>DISTRIBUTION</span><span>WATCH</span><span>CONTINUE</span></div>';
   h+='<div class="ai-body" style="margin-top:10px">';
   h+='<div style="margin-bottom:8px;color:var(--text);font-style:normal">'+ai.reasoning+'</div>';
-  if(ai.bull_case)h+='<div style="color:var(--pump);margin-bottom:4px">&#9650; '+ai.bull_case+'</div>';
+  h+='<div class="ai-score-grid">';
+  h+=renderAIScore('continue',ai.continuation_score||prob,probColor,'score');
+  h+=renderAIScore('distribution',ai.distribution_score||50,distColor,'risk');
+  h+=renderAIScore('squeeze risk',ai.squeeze_risk_score||50,sqColor,'risk');
+  h+='</div>';
+  h+='<div class="ai-meta"><span class="ai-meta-pill">'+(ai.listing_phase||'LISTING')+'</span><span class="ai-meta-pill">'+(ai.age_days||0)+'D OLD</span><span class="ai-meta-pill">'+(vd==='pump'?'LEAN LONG':vd==='dump'?'LEAN SHORT':'WAIT/PROVE')+'</span></div>';
+  if(ai.bull_case)h+='<div style="color:var(--pump);margin-top:10px;margin-bottom:4px">&#9650; '+ai.bull_case+'</div>';
   if(ai.bear_case)h+='<div style="color:var(--dump);margin-bottom:4px">&#9660; '+ai.bear_case+'</div>';
   if(ai.trade_angle)h+='<div style="color:var(--accent2);margin-top:6px;font-style:normal;border-top:1px solid var(--border);padding-top:6px">&#9658; '+ai.trade_angle+'</div>';
   h+='</div></div>';
   return h;
 }
 
+function gVerdict(coin){return coin.aiData&&coin.aiData.verdict?coin.aiData.verdict:coin.a.vd;}
+
 function rCC(coin){
   var sym=coin.sym,t=coin.t,a=coin.a,ot=coin.ot;
-  var vd=a.vd,cf=a.cf,sc=a.sc,mom=a.mom,vol=a.vol,tr=a.tr,act=a.act;
+  var vd=gVerdict(coin),cf=a.cf,sc=a.sc,mom=a.mom,vol=a.vol,tr=a.tr,act=a.act;
   var sh=sym.replace('USDT',''),chg=parseFloat(t.priceChangePercent||0);
   var cc=chg>0?'up':chg<0?'down':'def',cs=(chg>0?'+':'')+chg.toFixed(2)+'%';
   var ag=Math.round((Date.now()-ot)/864e5),col=vc(vd);
@@ -351,7 +434,7 @@ function rCC(coin){
 
 function rUC(item){var now=Date.now(),diff=item.listDate?item.listDate-now:null,ts,tl;if(diff===null){ts='TBA';tl='unconfirmed';}else if(diff<0){ts='Listed';tl='recently';}else if(diff<36e5){ts=Math.floor(diff/6e4)+'m';tl='until listing';}else if(diff<864e5){ts=Math.floor(diff/36e5)+'h '+Math.floor((diff%36e5)/6e4)+'m';tl='until listing';}else{ts=Math.ceil(diff/864e5)+'d';tl='until listing';}return '<div class="upcoming-card"><div class="upc-left"><div class="upc-sym">'+item.symbol+' <span class="new-badge">NEW</span></div><div class="upc-desc">'+item.title+'</div></div><div class="upc-time"><div class="time-val">'+ts+'</div><div class="time-lbl">'+tl+'</div></div></div>';}
 
-function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.f==='all'?S.nc:S.nc.filter(function(c){return c.a.vd===S.f;});var pu=S.nc.filter(function(c){return c.a.vd==='pump';}).length,du=S.nc.filter(function(c){return c.a.vd==='dump';}).length,ne=S.nc.filter(function(c){return c.a.vd==='neutral';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(&apos;new&apos;)">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(&apos;upcoming&apos;)">Upcoming</div></div>';if(S.tab==='new'){if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div><div class="filter-row"><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(&apos;all&apos;)">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(&apos;pump&apos;)">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(&apos;dump&apos;)">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(&apos;neutral&apos;)">&#9670; Watch</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{if(S.lu){h+='<div class="loading-row"><div class="spinner"></div>Fetching...</div>';}else if(S.eu){h+='<div class="err">Error: '+S.eu+'</div>';}else if(S.up.length===0){h+='<div class="inf">No upcoming listings found.</div>';}else{for(var i=0;i<S.up.length;i++)h+=rUC(S.up[i]);}}app.innerHTML=h;}
+function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.f==='all'?S.nc:S.nc.filter(function(c){return gVerdict(c)===S.f;});var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length,du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length,ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(&apos;new&apos;)">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(&apos;upcoming&apos;)">Upcoming</div></div>';if(S.tab==='new'){if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div><div class="filter-row"><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(&apos;all&apos;)">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(&apos;pump&apos;)">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(&apos;dump&apos;)">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(&apos;neutral&apos;)">&#9670; Watch</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{if(S.lu){h+='<div class="loading-row"><div class="spinner"></div>Fetching...</div>';}else if(S.eu){h+='<div class="err">Error: '+S.eu+'</div>';}else if(S.up.length===0){h+='<div class="inf">No upcoming listings found.</div>';}else{for(var i=0;i<S.up.length;i++)h+=rUC(S.up[i]);}}app.innerHTML=h;}
 function st(t){S.tab=t;rd();}
 function sf(f){S.f=f;rd();}
 loadAll();
