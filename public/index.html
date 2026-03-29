@@ -549,10 +549,10 @@ function copyAlertLevel(btn,sym,label,price){
 function renderWatchLevels(coin){
   var watch=buildWatchLevels(coin);
   if(!watch||!watch.levels||!watch.levels.length)return '';
-  var h='<div class="watch-levels"><div class="watch-head"><span class="watch-title">Watch Levels</span><span class="watch-help">Copy level, then set alert in Binance</span></div>';
+  var h='<div class="watch-levels"><div class="watch-head"><span class="watch-title">Watch Levels</span><span class="watch-help">Copy level, then open Binance in the same tab</span></div>';
   for(var i=0;i<watch.levels.length;i++){
     var lv=watch.levels[i],p=fmtLevelPrice(lv.price),tone=lv.tone||'neutral';
-    h+='<div class="level-row"><div class="level-main"><div class="level-label">'+lv.label+'</div><div class="level-note">'+lv.note+'</div></div><div class="level-side"><div class="level-price '+tone+'">'+p+'</div><div class="level-actions"><button class="level-btn '+tone+'" onclick="copyAlertLevel(this,\''+watch.symbol+'\',\''+lv.label.replace(/'/g,'&#39;')+'\',\''+p+'\')">Copy</button><a class="level-btn link" href="'+binanceFuturesUrl(watch.symbol)+'" target="_blank" rel="noopener">Binance</a></div></div></div>';
+    h+='<div class="level-row"><div class="level-main"><div class="level-label">'+lv.label+'</div><div class="level-note">'+lv.note+'</div></div><div class="level-side"><div class="level-price '+tone+'">'+p+'</div><div class="level-actions"><button class="level-btn '+tone+'" onclick="copyAlertLevel(this,\''+watch.symbol+'\',\''+lv.label.replace(/'/g,'&#39;')+'\',\''+p+'\')">Copy</button><a class="level-btn link" href="'+binanceFuturesUrl(watch.symbol)+'">Binance App/Web</a></div></div></div>';
   }
   h+='</div>';
   return h;
