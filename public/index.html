@@ -156,12 +156,7 @@ function getAIAnalysis(coin){
   if(aiCache[sym])return Promise.resolve(aiCache[sym]);
 
   var t=coin.t,a=coin.a,spot=coin.spot,fr=coin.fr;
-  var chg=parseFloat(t.priceChangePercent||0).toFixed(2);
-  var vol=parseFloat(t.quoteVolume||0);
-  var volStr=vol>=1e9?'$'+(vol/1e9).toFixed(1)+'B':vol>=1e6?'$'+(vol/1e6).toFixed(0)+'M':'$'+(vol/1e3).toFixed(0)+'K';
   var ageDays=Math.round((Date.now()-coin.ot)/864e5);
-  var price=parseFloat(t.lastPrice||0);
-  var spotInfo=spot?('Spot pair exists on Binance. Spot 24h change: '+parseFloat(spot.priceChangePercent||0).toFixed(2)+'%. Spot volume: $'+Math.round(parseFloat(spot.quoteVolume||0)/1e6)+'M.'):'No spot pair on Binance — pure futures listing.';
   var kl=coin.kl||[];
   var volTrend='unknown';
   if(kl.length>=12){
@@ -171,23 +166,44 @@ function getAIAnalysis(coin){
     volTrend=lateVol>earlyVol*1.3?'increasing (bullish)':lateVol<earlyVol*0.7?'decreasing (bearish)':'flat';
   }
 
-  var prompt='You are an expert crypto futures trader specializing in new Binance futures listings. Analyze this coin and give a direct trading verdict.\n\nCOIN: '+sym+'\nPrice: $'+price+'\n24h Change: '+chg+'%\n24h Futures Volume: '+volStr+'\nFunding Rate: '+fr.toFixed(4)+'%\nVolume trend (last 48h): '+volTrend+'\nListed: '+ageDays+' days ago\nTechnical score: '+a.sc+'/100\nMomentum: '+Math.round(a.mom)+'/100, Trend: '+Math.round(a.tr)+'/100\n'+spotInfo+'\n\nAnalyze using these factors:\n1. Spot market behavior (is price a slow grind or vertical pump?)\n2. Volume trend (natural build-up or fake spike?)\n3. Funding rate implications (overcrowded longs = short opportunity?)\n4. Listing age and where we are in the typical listing cycle\n5. Key risk: is this a liquidity event for large players to exit?\n\nRespond ONLY with valid JSON, no markdown, no extra text:\n{"verdict":"pump|dump|neutral","continuation_probability":0-100,"reasoning":"2-3 sentences of direct analysis","bull_case":"one sentence","bear_case":"one sentence","trade_angle":"Scenario A/B/C with specific entry idea"}';
+  var payload={
+    coin:{
+      symbol:sym,
+      price:parseFloat(t.lastPrice||0),
+      change_24h_pct:parseFloat(t.priceChangePercent||0),
+      futures_volume_24h_usd:parseFloat(t.quoteVolume||0),
+      funding_rate_pct:parseFloat(fr||0),
+      age_days:ageDays,
+      technical_score:parseFloat(a.sc||0),
+      momentum_score:parseFloat(a.mom||0),
+      trend_score:parseFloat(a.tr||0),
+      volume_score:parseFloat(a.vol||0),
+      activity_score:parseFloat(a.act||0),
+      heuristic_verdict:a.vd,
+      heuristic_confidence:parseFloat(a.cf||0),
+      open_interest:parseFloat(coin.oi||0),
+      volume_trend:volTrend,
+      has_spot_pair:!!spot,
+      spot_change_24h_pct:spot?parseFloat(spot.priceChangePercent||0):0,
+      spot_volume_24h_usd:spot?parseFloat(spot.quoteVolume||0):0,
+      flags:buildFlags(coin).map(function(f){return f.text;})
+    }
+  };
 
-  return fetch('https://api.anthropic.com/v1/messages',{
+  return fetch(PX+'/ai/analyze',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:400,
-      messages:[{role:'user',content:prompt}]
-    })
-  }).then(function(r){return r.json();}).then(function(d){
-    var text=d.content&&d.content[0]?d.content[0].text:'';
-    var parsed=JSON.parse(text);
-    aiCache[sym]=parsed;
-    return parsed;
+    body:JSON.stringify(payload)
+  }).then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok)throw new Error(d&&d.error?d.error:'HTTP '+r.status);
+      return d;
+    });
+  }).then(function(d){
+    aiCache[sym]=d;
+    return d;
   }).catch(function(e){
-    var fallback={verdict:a.vd,continuation_probability:a.cf,reasoning:'Analysis unavailable: '+e.message,bull_case:'Technical momentum supports continuation.',bear_case:'Risk of distribution as a liquidity event.',trade_angle:'Wait for clear directional break before entering.'};
+    var fallback={verdict:a.vd,continuation_probability:a.cf,reasoning:'Analysis unavailable: '+e.message,bull_case:'Technical momentum supports continuation.',bear_case:'Risk of distribution as a liquidity event.',trade_angle:'Wait for clear directional break before entering.',source:'fallback'};
     aiCache[sym]=fallback;
     return fallback;
   });
