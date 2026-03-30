@@ -132,6 +132,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .upc-time{text-align:right;flex-shrink:0}
 .time-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap}
 .time-lbl{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.radar-section{margin-bottom:18px}
+.radar-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.radar-title{font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;font-family:var(--mono);color:var(--text)}
+.radar-sub{font-size:11px;color:var(--muted2);max-width:70%;text-align:right}
+.radar-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 16px;margin-bottom:10px;position:relative;overflow:hidden}
+.radar-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent2)}
+.radar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.radar-symbol{font-size:19px;font-weight:800;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.radar-base{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.radar-score{min-width:72px;text-align:right}
+.radar-score-num{font-family:var(--mono);font-size:18px;font-weight:800}
+.radar-score-lbl{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em}
+.radar-why{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:8px}
+.radar-reasons{font-size:12px;color:var(--muted2);line-height:1.55;padding-left:16px;margin-bottom:10px}
+.radar-reasons li{margin-bottom:4px}
+.radar-tags,.radar-evidence{display:flex;flex-wrap:wrap;gap:6px}
+.radar-evidence{margin-top:8px}
+.radar-meta-pill{font-size:10px;font-family:var(--mono);padding:4px 8px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted2)}
+.radar-empty{background:var(--surface);border:1px dashed var(--border2);border-radius:14px;padding:14px 16px;font-size:12px;color:var(--muted);font-family:var(--mono)}
 .loading-row{display:flex;align-items:center;gap:10px;padding:40px 0;color:var(--muted2);font-size:13px;font-family:var(--mono);justify-content:center}
 .spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite}
 .err{background:rgba(255,77,109,0.07);border:1px solid rgba(255,77,109,0.2);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--dump);font-family:var(--mono);line-height:1.6}
@@ -154,7 +173,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 <div class="main" id="app"><div class="loading-row"><div class="spinner"></div>Initialising...</div></div>
 <script type="text/javascript">
 var PX='https://binance-proxy.radu-c-codreanu.workers.dev',ND=30,LIST_CAP=30,REFRESH_MS=90000,PERSIST_KEY='listingScoutStateV2';
-var S={tab:'new',f:'all',listingScope:'recent',nc:[],up:[],ln:false,lu:false,en:null,eu:null,autoRefresh:true,lastRefreshTs:0,nextRefreshTs:0,refreshTimer:null,tickTimer:null,changes:{},persist:{snapshots:{},autoRefresh:true,lastListTs:0,listingScope:'recent'},manualRefreshSeq:0};
+var RADAR_WINDOW_DAYS=120,RADAR_SPOT_ONLY_LIMIT=12,RADAR_EARLY_LIMIT=12;
+var S={tab:'new',f:'all',listingScope:'recent',nc:[],up:[],radar:null,ln:false,lu:false,lr:false,en:null,eu:null,er:null,autoRefresh:true,lastRefreshTs:0,nextRefreshTs:0,refreshTimer:null,tickTimer:null,changes:{},persist:{snapshots:{},autoRefresh:true,lastListTs:0,listingScope:'recent'},manualRefreshSeq:0};
 var aiCache={};
 
 function pF(p){return fetch(PX+p,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()});}
@@ -162,8 +182,13 @@ function fK(s,i,l){return pF('/fapi/v1/klines?symbol='+s+'&interval='+(i||'1h')+
 function fOI(s){return pF('/fapi/v1/openInterest?symbol='+s).then(function(d){return parseFloat(d.openInterest)||0;}).catch(function(){return 0;});}
 function fFR(s){return pF('/fapi/v1/fundingRate?symbol='+s+'&limit=3').then(function(d){return d&&d.length?parseFloat(d[d.length-1].fundingRate)*100:0;}).catch(function(){return 0;});}
 function fSpot(s){return fetch('https://api.binance.com/api/v3/ticker/24hr?symbol='+s+'USDT').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}
+function fSpotExchangeInfo(){return fetch('https://api.binance.com/api/v3/exchangeInfo',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function fSpotTickers(){return fetch('https://api.binance.com/api/v3/ticker/24hr',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function fAssetCatalog(){return pF('/bapi/asset/v1/public/asset/asset/get-all-asset').then(function(d){return d&&d.data?d.data:[];}).catch(function(){return[];});}
+function fLaunchpool(){return pF('/bapi/earn/v1/public/launchpool/project/list?pageNo=1&pageSize=80').then(function(d){return d&&d.data?d.data:{tracking:{list:[]},completed:{list:[]}};}).catch(function(){return{tracking:{list:[]},completed:{list:[]}};});}
 
-function fUp(){return pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=20&catalogId=48').then(function(d){var art=d&&d.data&&d.data.articles?d.data.articles:[];var res=[];for(var i=0;i<art.length;i++){var a=art[i];var t=a.title||'';var sm=(t.match(/([A-Z]{2,10})USDT/g)||[]).filter(function(v,j,arr){return arr.indexOf(v)===j;});var dm=t.match(/(\d{4}-\d{2}-\d{2})/);var ld=dm?new Date(dm[1]).getTime():null;for(var k=0;k<sm.length;k++){var b=sm[k].replace('USDT','');res.push({symbol:b+'/USDT',base:b,title:t.length>80?t.slice(0,77)+'...':t,listDate:ld,ad:a.releaseDate||Date.now()});}}var seen={};for(var m=0;m<res.length;m++){var rx=res[m];if(!seen[rx.base]||rx.ad>seen[rx.base].ad)seen[rx.base]=rx;}var out=[];for(var key in seen)out.push(seen[key]);return out.slice(0,10);});}
+function parseAnnouncementArticles(articles){var res=[];for(var i=0;i<articles.length;i++){var a=articles[i]||{};var t=a.title||'';var sm=(t.match(/([A-Z]{2,10})USDT/g)||[]).filter(function(v,j,arr){return arr.indexOf(v)===j;});var paren=(t.match(/\(([A-Z0-9]{2,12})\)/g)||[]).map(function(v){return v.replace(/[()]/g,'');});for(var p=0;p<paren.length;p++){if(sm.indexOf(paren[p]+'USDT')===-1)sm.push(paren[p]+'USDT');}var dm=t.match(/(\d{4}-\d{2}-\d{2})/);var ld=dm?new Date(dm[1]).getTime():null;for(var k=0;k<sm.length;k++){var b=sm[k].replace('USDT','');res.push({symbol:b+'/USDT',base:b,title:t.length>96?t.slice(0,93)+'...':t,listDate:ld,ad:a.releaseDate||Date.now(),article:a});}}var seen={};for(var m=0;m<res.length;m++){var rx=res[m];if(!seen[rx.base]||rx.ad>seen[rx.base].ad)seen[rx.base]=rx;}var out=[];for(var key in seen)out.push(seen[key]);return out.sort(function(a,b){return (b.ad||0)-(a.ad||0);});}
+function fUp(){return pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=30&catalogId=48').then(function(d){var art=d&&d.data&&d.data.articles?d.data.articles:[];return parseAnnouncementArticles(art).slice(0,10);});}
 
 function az(o){var chg=parseFloat(o.priceChangePercent)||0,vol=parseFloat(o.quoteVolume)||0,tc=parseInt(o.count)||0;var mom=Math.min(100,Math.max(0,50+chg*2)),volS=Math.min(100,(vol/5e6)*40+30),act=Math.min(100,(tc/5e4)*100);var tr=50;var kl=o.klines||[];if(kl.length>=6){var cl=kl.slice(-12).map(function(k){return parseFloat(k[4]);});var n=cl.length,xm=(n-1)/2,ym=cl.reduce(function(a,b){return a+b;},0)/n;var nu=0,de=0;cl.forEach(function(y,x){nu+=(x-xm)*(y-ym);de+=(x-xm)*(x-xm);});var sl=de?nu/de:0;tr=Math.min(100,Math.max(0,50+(ym?(sl/ym)*100:0)*20));}var oiS=Math.min(100,o.oi>0?Math.log(o.oi+1)/Math.LN10*20:40);var ag=(Date.now()-o.openTime)/864e5,fr=ag<3?70:ag<7?62:ag<14?54:42;var sc=Math.round(mom*.3+volS*.2+tr*.2+act*.1+oiS*.1+fr*.1);var vd=sc>=62?'pump':sc<=42?'dump':'neutral';return{mom:mom,vol:volS,act:act,tr:tr,sc:sc,vd:vd,cf:Math.max(10,Math.min(98,Math.round(Math.abs(sc-50)*2)))};}
 
@@ -178,6 +203,97 @@ function fmtPct(v,d){var n=parseFloat(v||0);return (n>0?'+':'')+n.toFixed(d==nul
 function escAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function rn(v){return Math.round(parseFloat(v||0));}
+function uniq(arr){return arr.filter(function(v,i,a){return v&&a.indexOf(v)===i;});}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function fmtShortDate(ts){if(!ts)return '--';return new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});}
+function scoreTone(v){return v>=80?'var(--pump)':v>=60?'var(--neutral)':'var(--accent2)';}
+function tagClass(tag){return tag==='Announced'?'bull':tag==='Launchpool'?'info':tag==='Spot only'?'warn':tag==='Cross-exchange'?'warn':'info';}
+function cleanProjectName(v){return String(v||'').replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();}
+function parsePairsFromTitle(title){var pairs=(title.match(/([A-Z]{2,10})USDT/g)||[]).map(function(v){return v.replace('USDT','');});var paren=(title.match(/\(([A-Z0-9]{2,12})\)/g)||[]).map(function(v){return v.replace(/[()]/g,'');});return uniq(pairs.concat(paren).filter(function(v){return v&&v.length>=2&&v.length<=12&&!/^(USDT|USDC|FDUSD|BNB|BTC|ETH)$/.test(v);}));}
+function titleHasTerm(title,terms){var up=String(title||'').toUpperCase();for(var i=0;i<terms.length;i++)if(up.indexOf(terms[i].toUpperCase())!==-1)return true;return false;}
+function launchpoolLabel(item){if(!item)return 'Launchpool';if(item.status==='SUBSCRIBE')return 'Tracking';if(item.status==='PREHEAT')return 'Preheat';return 'Launchpool';}
+function buildRadar(){
+  return Promise.all([
+    pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=50&catalogId=48'),
+    fLaunchpool(),
+    fAssetCatalog(),
+    fSpotExchangeInfo(),
+    fSpotTickers(),
+    pF('/fapi/v1/exchangeInfo')
+  ]).then(function(res){
+    var artRes=res[0],launchpool=res[1],assets=res[2],spotInfo=res[3],spotTickers=res[4],futInfo=res[5];
+    var articles=artRes&&artRes.data&&artRes.data.articles?artRes.data.articles:[];
+    var parsed=parseAnnouncementArticles(articles);
+    var articleSignals={};
+    for(var i=0;i<articles.length;i++){
+      var article=articles[i]||{},title=article.title||'',bases=parsePairsFromTitle(title),bucket=titleHasTerm(title,['will list','seed tag','lists'])?'Announced':titleHasTerm(title,['launchpool','megadrop','hodler','alpha'])?'Ecosystem':'Other';
+      for(var b=0;b<bases.length;b++){
+        articleSignals[bases[b]]=articleSignals[bases[b]]||[];
+        articleSignals[bases[b]].push({title:title,releaseDate:article.releaseDate||0,bucket:bucket});
+      }
+    }
+    var spotSymbols={},spotBases={},spotTickerMap={},futuresBases={};
+    (spotInfo.symbols||[]).forEach(function(s){if((s.status==='TRADING'||s.status==='BREAK')&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC'||s.quoteAsset==='FDUSD')){spotSymbols[s.symbol]=s;spotBases[s.baseAsset]=true;}});
+    (spotTickers||[]).forEach(function(t){spotTickerMap[t.symbol]=t;});
+    (futInfo.symbols||[]).forEach(function(s){if(s.status==='TRADING'&&s.contractType==='PERPETUAL'&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC'))futuresBases[s.baseAsset||s.symbol.replace(/USDT|USDC/g,'')]=true;});
+    var assetMap={};
+    for(var a=0;a<assets.length;a++){var asset=assets[a]||{};if(asset.assetCode)assetMap[asset.assetCode]=asset;}
+    var announced=[];
+    for(var p=0;p<parsed.length;p++){
+      var item=parsed[p];
+      announced.push({base:item.base,symbol:item.symbol,confidence:96,category:'Announced',why:'Official Binance listing article already published.',reasons:['Official announcement detected','Listing date parsed from article'],tags:['Announced','Binance'],evidence:[item.title],listDate:item.listDate,releaseDate:item.ad,sortTs:item.listDate||item.ad||0});
+    }
+    var lpItems=[].concat((launchpool.tracking&&launchpool.tracking.list)||[],(launchpool.completed&&launchpool.completed.list)||[]);
+    var lpByCoin={};
+    for(var l=0;l<lpItems.length;l++){
+      var raw=lpItems[l]||{},coin=String(raw.rebateCoin||'').toUpperCase();
+      if(!coin||coin==='BNB'||coin==='USDT'||coin==='USDC'||coin==='FDUSD'||coin==='U')continue;
+      var existing=lpByCoin[coin];
+      if(!existing||(+raw.coinTradeTime||0)>(+existing.coinTradeTime||0)||raw.status==='SUBSCRIBE')lpByCoin[coin]=raw;
+    }
+    var probable=[],early=[];
+    Object.keys(lpByCoin).forEach(function(base){
+      var item=lpByCoin[base],spotExists=!!spotBases[base],futuresExists=!!futuresBases[base],tradeTs=+item.coinTradeTime||0,startTs=+item.investStartTime||0,recentTs=tradeTs||startTs||0,daysSince=recentTs?((Date.now()-recentTs)/864e5):999;
+      if(daysSince>RADAR_WINDOW_DAYS)return;
+      var pair=base+'USDT',ticker=spotTickerMap[pair],spotVol=ticker?parseFloat(ticker.quoteVolume||0):0,signals=articleSignals[base]||[],ecosystemHits=signals.filter(function(v){return v.bucket==='Ecosystem';}),announcedHits=signals.filter(function(v){return v.bucket==='Announced';});
+      var reasons=[],tags=[launchpoolLabel(item),'Binance'];
+      if(assetMap[base])tags.push('Asset registry');
+      if(announcedHits.length)tags.push('Announced');
+      if(ecosystemHits.length)tags.push('Ecosystem');
+      if(spotExists&&!futuresExists){
+        var conf=72;
+        reasons.push('Already trading on Binance spot but still missing a Binance perp.');
+        tags.push('Spot only');
+        if(daysSince<=45){conf+=8;reasons.push('Recent Launchpool / ecosystem campaign keeps it on Binance’s radar.');}
+        if(spotVol>25000000){conf+=7;reasons.push('Spot volume is already substantial.');}
+        if(announcedHits.length){conf+=8;reasons.push('Recent official article coverage adds follow-through odds.');}
+        probable.push({base:base,symbol:base+'/USDT',confidence:clamp(Math.round(conf),55,93),category:'Probable',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item),spotVol?('Spot vol '+fv(spotVol)):'Spot live'].concat(announcedHits.slice(0,1).map(function(v){return v.title;})),sortTs:recentTs||Date.now()});
+      }else if(!spotExists&&!futuresExists){
+        var econf=54;
+        reasons.push('Shows up in Binance Launchpool / ecosystem flow before broad market rollout.');
+        if(item.status==='SUBSCRIBE'||item.status==='PREHEAT'){econf+=12;reasons.push('Campaign is still active, so listing path is still live.');}
+        if(daysSince<=21){econf+=6;reasons.push('Fresh campaign timing keeps the signal relevant.');}
+        if(ecosystemHits.length){econf+=6;reasons.push('Additional ecosystem article hits (Alpha / HODLer / Megadrop style).');}
+        early.push({base:base,symbol:base+'/USDT',confidence:clamp(Math.round(econf),35,78),category:'Early Signals',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item)].concat(ecosystemHits.slice(0,2).map(function(v){return v.title;})),sortTs:recentTs||Date.now()});
+      }
+    });
+    Object.keys(articleSignals).forEach(function(base){
+      if(spotBases[base]||futuresBases[base])return;
+      var hits=articleSignals[base]||[];
+      var eco=hits.filter(function(v){return v.bucket==='Ecosystem';});
+      if(!eco.length)return;
+      var conf=48+Math.min(18,eco.length*6);
+      early.push({base:base,symbol:base+'/USDT',confidence:clamp(conf,35,74),category:'Early Signals',why:'Binance ecosystem mentions exist, but the trading pair is not live yet.',reasons:['Seen in Binance ecosystem content before listing confirmation','No Binance spot/perp market live yet'],tags:uniq(['Ecosystem','Binance']),evidence:eco.slice(0,2).map(function(v){return v.title;}),sortTs:eco[0].releaseDate||0});
+    });
+    probable=probable.sort(function(a,b){return b.confidence-a.confidence||b.sortTs-a.sortTs;}).slice(0,RADAR_SPOT_ONLY_LIMIT);
+    early=early.sort(function(a,b){return b.confidence-a.confidence||b.sortTs-a.sortTs;});
+    var earlySeen={};
+    early=early.filter(function(item){if(earlySeen[item.base])return false;earlySeen[item.base]=true;return true;}).slice(0,RADAR_EARLY_LIMIT);
+    var annSeen={};
+    announced=announced.filter(function(item){if(annSeen[item.base])return false;annSeen[item.base]=true;return true;});
+    return {generatedAt:Date.now(),sections:[{key:'announced',title:'Announced',hint:'Official Binance listing notices already out.',items:announced},{key:'probable',title:'Probable',hint:'Strong follow-through candidates from spot + Binance ecosystem signals.',items:probable},{key:'early',title:'Early Signals',hint:'Binance ecosystem breadcrumbs before a confirmed market listing.',items:early}]};
+  });
+}
 
 function loadPersist(){try{var raw=localStorage.getItem(PERSIST_KEY);if(raw){var p=JSON.parse(raw);if(p&&typeof p==='object')S.persist=p;}}catch(e){}if(typeof S.persist.autoRefresh==='boolean')S.autoRefresh=S.persist.autoRefresh;S.listingScope=S.persist.listingScope||S.listingScope||'recent';}
 function savePersist(){try{S.persist.autoRefresh=S.autoRefresh;S.persist.listingScope=S.listingScope;localStorage.setItem(PERSIST_KEY,JSON.stringify(S.persist));}catch(e){}}
@@ -262,10 +378,11 @@ function lNL(){S.ln=true;S.en=null;rd();return Promise.all([pF('/fapi/v1/exchang
 function loadAIForAll(){S.nc.forEach(function(coin,idx){coin.aiLoading=true;rd();setTimeout(function(){getAIAnalysis(coin).then(function(ai){coin.aiData=ai;coin.aiLoading=false;if(idx===S.nc.length-1){applyChangeSnapshots();}rd();});},idx*120);});}
 
 function lUp(){S.lu=true;S.eu=null;rd();return fUp().then(function(u){S.up=u;}).catch(function(e){S.eu=e.message;}).then(function(){S.lu=false;rd();});}
+function lRadar(){S.lr=true;S.er=null;rd();return buildRadar().then(function(r){S.radar=r;}).catch(function(e){S.er=e.message;}).then(function(){S.lr=false;rd();});}
 function startAutoRefresh(){if(S.refreshTimer)clearTimeout(S.refreshTimer);if(S.tickTimer)clearInterval(S.tickTimer);if(S.autoRefresh){S.nextRefreshTs=Date.now()+REFRESH_MS;S.refreshTimer=setTimeout(function(){loadAll(true);},REFRESH_MS);S.tickTimer=setInterval(function(){var el=document.getElementById('countdown');if(el){var diff=Math.max(0,S.nextRefreshTs-Date.now());el.textContent=Math.ceil(diff/1000)+'s';}},1000);}else{S.nextRefreshTs=0;}}
 function toggleAutoRefresh(){S.autoRefresh=!S.autoRefresh;savePersist();startAutoRefresh();rd();}
 function setListingScope(scope){S.listingScope=scope==='all'?'all':'recent';savePersist();loadAll(false);}
-function loadAll(isAuto){var b=document.getElementById('rb');if(b)b.classList.add('spinning');aiCache={};S.lastRefreshTs=Date.now();return Promise.all([lNL(),lUp()]).then(function(){var el=document.getElementById('lu');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var b2=document.getElementById('rb');if(b2)b2.classList.remove('spinning');startAutoRefresh();}).catch(function(){var b3=document.getElementById('rb');if(b3)b3.classList.remove('spinning');startAutoRefresh();});}
+function loadAll(isAuto){var b=document.getElementById('rb');if(b)b.classList.add('spinning');aiCache={};S.lastRefreshTs=Date.now();return Promise.all([lNL(),lUp(),lRadar()]).then(function(){var el=document.getElementById('lu');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var b2=document.getElementById('rb');if(b2)b2.classList.remove('spinning');startAutoRefresh();}).catch(function(){var b3=document.getElementById('rb');if(b3)b3.classList.remove('spinning');startAutoRefresh();});}
 
 function renderFlags(flags){var h='<div class="signal-flags">';for(var i=0;i<flags.length;i++)h+='<span class="flag '+flags[i].type+'">'+flags[i].text+'</span>';return h+'</div>';}
 function renderAIScore(label,val,color,mode){var v=Math.round(val||0);return '<div class="ai-score"><div class="ai-score-lbl">'+label+'</div><div class="ai-score-val" style="color:'+color+'">'+v+'</div><div class="ai-score-sub">'+scoreLabel(v,mode)+'</div><div class="ai-mini-bar"><div class="ai-mini-fill" style="width:'+v+'%;background:'+color+'"></div></div></div>';}
@@ -287,9 +404,11 @@ function cardChangeClass(coin){var ch=coin.changeInfo||S.changes[coin.sym];if(!c
 function rCC(coin){var sym=coin.sym,t=coin.t,a=coin.a,ot=coin.ot;var vd=gVerdict(coin),sc=a.sc,mom=a.mom,vol=a.vol,tr=a.tr,act=a.act;var sh=sym.replace('USDT',''),chg=parseFloat(t.priceChangePercent||0);var cc=chg>0?'up':chg<0?'down':'def',cs=(chg>0?'+':'')+chg.toFixed(2)+'%';var ag=Math.round((Date.now()-ot)/864e5),col=vc(vd);var ic=vd==='pump'?'&#9650;':vd==='dump'?'&#9660;':'&#9670;';var lb=vd==='pump'?'PUMP':vd==='dump'?'DUMP':'WATCH';var fr=typeof coin.fr==='number'?coin.fr.toFixed(4)+'%':'--';var flags=buildFlags(coin);var ai=coin.aiData||{};var detailsLabel=(ai.primary_setup?setupLabel(ai.primary_setup):'DETAILS')+' · '+(ai.setup_quality_rank||'--')+' setup';var h='<div class="coin-card '+vd+cardChangeClass(coin)+'">';h+='<div class="card-top"><div><div class="coin-symbol">'+sh+'</div><div class="coin-label">USDT PERP &middot; '+ag+'d ago</div></div><div class="verdict-pill '+vd+'">'+ic+' '+lb+'</div></div>';h+=renderFlags(flags);h+='<div class="metrics">';h+='<div class="metric"><div class="metric-label">PRICE</div><div class="metric-value def">'+fp(t.lastPrice)+'</div></div>';h+='<div class="metric"><div class="metric-label">24H CHG</div><div class="metric-value '+cc+'">'+cs+'</div></div>';h+='<div class="metric"><div class="metric-label">FUNDING</div><div class="metric-value '+(parseFloat(coin.fr||0)>0.05?'down':parseFloat(coin.fr||0)<0?'up':'def')+'">'+fr+'</div></div>';h+='<div class="metric"><div class="metric-label">VOL 24H</div><div class="metric-value def">'+fv(t.quoteVolume)+'</div></div>';h+='<div class="metric"><div class="metric-label">SPOT</div><div class="metric-value '+(coin.spot?'up':'def')+'">'+(coin.spot?fp(coin.spot.lastPrice):'--')+'</div></div>';h+='<div class="metric"><div class="metric-label">SCORE</div><div class="metric-value" style="color:'+col+'">'+sc+'/100</div></div>';h+='</div>';h+='<details class="card-details"><summary><span>'+detailsLabel+'</span><span class="details-caret">&#9656;</span></summary><div class="details-body">';h+='<div class="signals">';h+='<div class="signal-row"><span class="signal-label">momentum</span>'+sb(mom,col)+'</div>';h+='<div class="signal-row"><span class="signal-label">volume</span>'+sb(vol,col)+'</div>';h+='<div class="signal-row"><span class="signal-label">trend</span>'+sb(tr,col)+'</div>';h+='<div class="signal-row"><span class="signal-label">activity</span>'+sb(act,col)+'</div>';h+='</div>';h+=renderAI(coin);h+='</div></details></div>';return h;}
 
 function rUC(item){var now=Date.now(),diff=item.listDate?item.listDate-now:null,ts,tl;if(diff===null){ts='TBA';tl='unconfirmed';}else if(diff<0){ts='Listed';tl='recently';}else if(diff<36e5){ts=Math.floor(diff/6e4)+'m';tl='until listing';}else if(diff<864e5){ts=Math.floor(diff/36e5)+'h '+Math.floor((diff%36e5)/6e4)+'m';tl='until listing';}else{ts=Math.ceil(diff/864e5)+'d';tl='until listing';}return '<div class="upcoming-card"><div class="upc-left"><div class="upc-sym">'+item.symbol+' <span class="new-badge">NEW</span></div><div class="upc-desc">'+item.title+'</div></div><div class="upc-time"><div class="time-val">'+ts+'</div><div class="time-lbl">'+tl+'</div></div></div>';}
+function renderRadarCard(item){var score=Math.round(item.confidence||0),scoreColor=scoreTone(score),reasonHtml='';for(var i=0;i<Math.min((item.reasons||[]).length,3);i++)reasonHtml+='<li>'+escHtml(item.reasons[i])+'</li>';var tags=(item.tags||[]).map(function(tag){return '<span class="flag '+tagClass(tag)+'">'+escHtml(tag)+'</span>';}).join('');var evidence=(item.evidence||[]).slice(0,3).map(function(ev){return '<span class="radar-meta-pill">'+escHtml(ev)+'</span>';}).join('');return '<div class="radar-card"><div class="radar-top"><div><div class="radar-symbol">'+escHtml(item.base)+' <span class="new-badge">'+escHtml(item.category)+'</span></div><div class="radar-base">'+escHtml(item.symbol||item.base+'/USDT')+(item.listDate?' • '+fmtShortDate(item.listDate):'')+'</div></div><div class="radar-score"><div class="radar-score-num" style="color:'+scoreColor+'">'+score+'</div><div class="radar-score-lbl">confidence</div></div></div><div class="radar-why">'+escHtml(item.why||'')+'</div>'+(reasonHtml?'<ul class="radar-reasons">'+reasonHtml+'</ul>':'')+'<div class="radar-tags">'+tags+'</div>'+(evidence?'<div class="radar-evidence">'+evidence+'</div>':'')+'</div>';}
+function renderRadar(){if(S.lr)return '<div class="loading-row"><div class="spinner"></div>Building radar...</div>';if(S.er)return '<div class="err">Error: '+escHtml(S.er)+'</div>';if(!S.radar||!S.radar.sections)return '<div class="inf">Radar not ready yet.</div>';var h='<div class="inf">Upcoming Radar blends official Binance announcements with Launchpool/ecosystem activity plus spot-vs-perp listing gaps.</div>';for(var i=0;i<S.radar.sections.length;i++){var sec=S.radar.sections[i],items=sec.items||[];h+='<div class="radar-section"><div class="radar-head"><div class="radar-title">'+escHtml(sec.title)+'</div><div class="radar-sub">'+escHtml(sec.hint||'')+'</div></div>';if(!items.length)h+='<div class="radar-empty">No candidates in this bucket right now.</div>';else for(var j=0;j<items.length;j++)h+=renderRadarCard(items[j]);h+='</div>';}return h;}
 function renderRefreshStrip(){var next=S.autoRefresh?Math.max(0,Math.ceil((S.nextRefreshTs-Date.now())/1000)):0;return '<div class="refresh-strip"><div class="refresh-meta"><div class="refresh-title">Auto-refresh</div><div class="refresh-sub">'+(S.autoRefresh?'Scanning every '+Math.round(REFRESH_MS/1000)+'s • next in ':'Paused • manual scans only')+'<span id="countdown">'+(S.autoRefresh?next+'s':'--')+'</span></div></div><div class="refresh-actions"><button class="toggle-btn '+(S.autoRefresh?'on':'')+'" onclick="toggleAutoRefresh()">'+(S.autoRefresh?'ON':'OFF')+'</button></div></div>';}
 
-function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.nc;if(S.f!=='all'){fl=S.nc.filter(function(c){if(S.f==='pump'||S.f==='dump'||S.f==='neutral')return gVerdict(c)===S.f;if(S.f==='postdump')return gMode(c)==='dump';return gMode(c)===S.f;});}var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length;var du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length;var ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;var ct=S.nc.filter(function(c){return gMode(c)==='continuation';}).length;var dp=S.nc.filter(function(c){return gMode(c)==='dump';}).length;var sq=S.nc.filter(function(c){return gMode(c)==='squeeze';}).length;var sw=S.nc.filter(function(c){return gMode(c)==='swing';}).length;var usdtCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDT';}).length;var usdcCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDC';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(\'new\')">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(\'upcoming\')">Upcoming</div></div>';if(S.tab==='new'){h+=renderRefreshStrip();if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot accent"></div><span class="summary-num" style="color:var(--accent2)">'+sq+'</span><span class="summary-txt">traps</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div>';h+='<div class="filter-row"><div class="chip '+(S.listingScope==='recent'?'active':'')+'" onclick="setListingScope(\'recent\')">Recent 30d</div><div class="chip '+(S.listingScope==='all'?'active':'')+'" onclick="setListingScope(\'all\')">All</div><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(\'all\')">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(\'pump\')">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(\'dump\')">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(\'neutral\')">&#9670; Watch</div><div class="chip pump '+(S.f==='continuation'?'active':'')+'" onclick="sf(\'continuation\')">Continue '+ct+'</div><div class="chip dump '+(S.f==='postdump'?'active':'')+'" onclick="sf(\'postdump\')">Post-dump '+dp+'</div><div class="chip accent '+(S.f==='squeeze'?'active':'')+'" onclick="sf(\'squeeze\')">Trap '+sq+'</div><div class="chip neutral '+(S.f==='swing'?'active':'')+'" onclick="sf(\'swing\')">Swing '+sw+'</div><div class="chip '+((S.listingScope==='all'||usdtCount>0)?'active':'')+'" onclick="void(0)">USDT '+usdtCount+'</div><div class="chip '+((S.listingScope==='all'||usdcCount>0)?'active':'')+'" onclick="void(0)">USDC '+usdcCount+'</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{if(S.lu){h+='<div class="loading-row"><div class="spinner"></div>Fetching...</div>';}else if(S.eu){h+='<div class="err">Error: '+S.eu+'</div>';}else if(S.up.length===0){h+='<div class="inf">No upcoming listings found.</div>';}else{for(var j=0;j<S.up.length;j++)h+=rUC(S.up[j]);}}app.innerHTML=h;}
+function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.nc;if(S.f!=='all'){fl=S.nc.filter(function(c){if(S.f==='pump'||S.f==='dump'||S.f==='neutral')return gVerdict(c)===S.f;if(S.f==='postdump')return gMode(c)==='dump';return gMode(c)===S.f;});}var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length;var du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length;var ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;var ct=S.nc.filter(function(c){return gMode(c)==='continuation';}).length;var dp=S.nc.filter(function(c){return gMode(c)==='dump';}).length;var sq=S.nc.filter(function(c){return gMode(c)==='squeeze';}).length;var sw=S.nc.filter(function(c){return gMode(c)==='swing';}).length;var usdtCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDT';}).length;var usdcCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDC';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(\'new\')">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(\'upcoming\')">Upcoming Radar</div></div>';if(S.tab==='new'){h+=renderRefreshStrip();if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot accent"></div><span class="summary-num" style="color:var(--accent2)">'+sq+'</span><span class="summary-txt">traps</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div>';h+='<div class="filter-row"><div class="chip '+(S.listingScope==='recent'?'active':'')+'" onclick="setListingScope(\'recent\')">Recent 30d</div><div class="chip '+(S.listingScope==='all'?'active':'')+'" onclick="setListingScope(\'all\')">All</div><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(\'all\')">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(\'pump\')">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(\'dump\')">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(\'neutral\')">&#9670; Watch</div><div class="chip pump '+(S.f==='continuation'?'active':'')+'" onclick="sf(\'continuation\')">Continue '+ct+'</div><div class="chip dump '+(S.f==='postdump'?'active':'')+'" onclick="sf(\'postdump\')">Post-dump '+dp+'</div><div class="chip accent '+(S.f==='squeeze'?'active':'')+'" onclick="sf(\'squeeze\')">Trap '+sq+'</div><div class="chip neutral '+(S.f==='swing'?'active':'')+'" onclick="sf(\'swing\')">Swing '+sw+'</div><div class="chip '+((S.listingScope==='all'||usdtCount>0)?'active':'')+'" onclick="void(0)">USDT '+usdtCount+'</div><div class="chip '+((S.listingScope==='all'||usdcCount>0)?'active':'')+'" onclick="void(0)">USDC '+usdcCount+'</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{h+=renderRefreshStrip();h+=renderRadar();}app.innerHTML=h;}
 function st(t){S.tab=t;rd();}
 function sf(f){S.f=f;rd();}
 loadPersist();
