@@ -214,12 +214,12 @@ function titleHasTerm(title,terms){var up=String(title||'').toUpperCase();for(va
 function launchpoolLabel(item){if(!item)return 'Launchpool';if(item.status==='SUBSCRIBE')return 'Tracking';if(item.status==='PREHEAT')return 'Preheat';return 'Launchpool';}
 function buildRadar(){
   return Promise.all([
-    pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=80&catalogId=48'),
+    pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=50&catalogId=48').catch(function(){return {data:{articles:[]}};}),
     fLaunchpool(),
     fAssetCatalog(),
-    fSpotExchangeInfo(),
-    fSpotTickers(),
-    pF('/fapi/v1/exchangeInfo')
+    fSpotExchangeInfo().catch(function(){return {symbols:[]};}),
+    fSpotTickers().catch(function(){return []; }),
+    pF('/fapi/v1/exchangeInfo').catch(function(){return {symbols:[]};})
   ]).then(function(res){
     var artRes=res[0],launchpool=res[1],assets=res[2],spotInfo=res[3],spotTickers=res[4],futInfo=res[5];
     var articles=artRes&&artRes.data&&artRes.data.articles?artRes.data.articles:[];
