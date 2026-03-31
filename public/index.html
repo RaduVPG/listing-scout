@@ -214,7 +214,7 @@ function titleHasTerm(title,terms){var up=String(title||'').toUpperCase();for(va
 function launchpoolLabel(item){if(!item)return 'Launchpool';if(item.status==='SUBSCRIBE')return 'Tracking';if(item.status==='PREHEAT')return 'Preheat';return 'Launchpool';}
 function buildRadar(){
   return Promise.all([
-    pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=50&catalogId=48'),
+    pF('/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=80&catalogId=48'),
     fLaunchpool(),
     fAssetCatalog(),
     fSpotExchangeInfo(),
@@ -225,24 +225,47 @@ function buildRadar(){
     var articles=artRes&&artRes.data&&artRes.data.articles?artRes.data.articles:[];
     var parsed=parseAnnouncementArticles(articles);
     var articleSignals={};
+    var articleMentions={};
     for(var i=0;i<articles.length;i++){
-      var article=articles[i]||{},title=article.title||'',bases=parsePairsFromTitle(title),bucket=titleHasTerm(title,['will list','seed tag','lists'])?'Announced':titleHasTerm(title,['launchpool','megadrop','hodler','alpha'])?'Ecosystem':'Other';
+      var article=articles[i]||{},title=article.title||'',bases=parsePairsFromTitle(title);
+      var bucket=titleHasTerm(title,['will list','seed tag','lists'])?'Announced':titleHasTerm(title,['launchpool','megadrop','hodler','alpha'])?'Ecosystem':titleHasTerm(title,['binance','campaign','trading competition','earn','wallet','staking','simple earn'])?'Support':'Other';
       for(var b=0;b<bases.length;b++){
-        articleSignals[bases[b]]=articleSignals[bases[b]]||[];
-        articleSignals[bases[b]].push({title:title,releaseDate:article.releaseDate||0,bucket:bucket});
+        var base=bases[b];
+        articleSignals[base]=articleSignals[base]||[];
+        articleSignals[base].push({title:title,releaseDate:article.releaseDate||0,bucket:bucket});
+        articleMentions[base]=(articleMentions[base]||0)+1;
       }
     }
-    var spotSymbols={},spotBases={},spotTickerMap={},futuresBases={};
-    (spotInfo.symbols||[]).forEach(function(s){if((s.status==='TRADING'||s.status==='BREAK')&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC'||s.quoteAsset==='FDUSD')){spotSymbols[s.symbol]=s;spotBases[s.baseAsset]=true;}});
+    var spotSymbols={},spotBases={},spotBaseQuotes={},spotTickerMap={},futuresBases={},futuresPairs={};
+    (spotInfo.symbols||[]).forEach(function(s){
+      if((s.status==='TRADING'||s.status==='BREAK')&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC'||s.quoteAsset==='FDUSD')){
+        spotSymbols[s.symbol]=s;
+        spotBases[s.baseAsset]=true;
+        spotBaseQuotes[s.baseAsset]=spotBaseQuotes[s.baseAsset]||[];
+        if(spotBaseQuotes[s.baseAsset].indexOf(s.quoteAsset)===-1)spotBaseQuotes[s.baseAsset].push(s.quoteAsset);
+      }
+    });
     (spotTickers||[]).forEach(function(t){spotTickerMap[t.symbol]=t;});
-    (futInfo.symbols||[]).forEach(function(s){if(s.status==='TRADING'&&s.contractType==='PERPETUAL'&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC'))futuresBases[s.baseAsset||s.symbol.replace(/USDT|USDC/g,'')]=true;});
+    (futInfo.symbols||[]).forEach(function(s){
+      if(s.status==='TRADING'&&s.contractType==='PERPETUAL'&&(s.quoteAsset==='USDT'||s.quoteAsset==='USDC')){
+        var base=s.baseAsset||s.symbol.replace(/USDT|USDC/g,'');
+        futuresBases[base]=true;
+        futuresPairs[base]=futuresPairs[base]||[];
+        if(futuresPairs[base].indexOf(s.quoteAsset)===-1)futuresPairs[base].push(s.quoteAsset);
+      }
+    });
     var assetMap={};
-    for(var a=0;a<assets.length;a++){var asset=assets[a]||{};if(asset.assetCode)assetMap[asset.assetCode]=asset;}
+    for(var a=0;a<assets.length;a++){
+      var asset=assets[a]||{};
+      if(asset.assetCode)assetMap[String(asset.assetCode).toUpperCase()]=asset;
+    }
+
     var announced=[];
     for(var p=0;p<parsed.length;p++){
       var item=parsed[p];
       announced.push({base:item.base,symbol:item.symbol,confidence:96,category:'Announced',why:'Official Binance listing article already published.',reasons:['Official announcement detected','Listing date parsed from article'],tags:['Announced','Binance'],evidence:[item.title],listDate:item.listDate,releaseDate:item.ad,sortTs:item.listDate||item.ad||0});
     }
+
     var lpItems=[].concat((launchpool.tracking&&launchpool.tracking.list)||[],(launchpool.completed&&launchpool.completed.list)||[]);
     var lpByCoin={};
     for(var l=0;l<lpItems.length;l++){
@@ -251,47 +274,113 @@ function buildRadar(){
       var existing=lpByCoin[coin];
       if(!existing||(+raw.coinTradeTime||0)>(+existing.coinTradeTime||0)||raw.status==='SUBSCRIBE')lpByCoin[coin]=raw;
     }
+
+    function latestRelease(list){return (list||[]).reduce(function(max,item){return Math.max(max,item.releaseDate||0);},0);}
+    function pushCandidate(arr,item){if(!item||!item.base)return;arr.push(item);}
+
     var probable=[],early=[];
+
     Object.keys(lpByCoin).forEach(function(base){
       var item=lpByCoin[base],spotExists=!!spotBases[base],futuresExists=!!futuresBases[base],tradeTs=+item.coinTradeTime||0,startTs=+item.investStartTime||0,recentTs=tradeTs||startTs||0,daysSince=recentTs?((Date.now()-recentTs)/864e5):999;
       if(daysSince>RADAR_WINDOW_DAYS)return;
-      var pair=base+'USDT',ticker=spotTickerMap[pair],spotVol=ticker?parseFloat(ticker.quoteVolume||0):0,signals=articleSignals[base]||[],ecosystemHits=signals.filter(function(v){return v.bucket==='Ecosystem';}),announcedHits=signals.filter(function(v){return v.bucket==='Announced';});
-      var reasons=[],tags=[launchpoolLabel(item),'Binance'];
+      var pair=base+'USDT',ticker=spotTickerMap[pair]||spotTickerMap[base+'USDC']||spotTickerMap[base+'FDUSD'],spotVol=ticker?parseFloat(ticker.quoteVolume||0):0,signals=articleSignals[base]||[],ecosystemHits=signals.filter(function(v){return v.bucket==='Ecosystem';}),supportHits=signals.filter(function(v){return v.bucket==='Support';}),announcedHits=signals.filter(function(v){return v.bucket==='Announced';});
+      var tags=[launchpoolLabel(item),'Binance'];
       if(assetMap[base])tags.push('Asset registry');
-      if(announcedHits.length)tags.push('Announced');
       if(ecosystemHits.length)tags.push('Ecosystem');
+      if(supportHits.length)tags.push('Article mention');
+
       if(spotExists&&!futuresExists){
-        var conf=72;
-        reasons.push('Already trading on Binance spot but still missing a Binance perp.');
+        var conf=64;
+        var reasons=['Already trading on Binance spot but still missing a Binance perp.'];
         tags.push('Spot only');
-        if(daysSince<=45){conf+=8;reasons.push('Recent Launchpool / ecosystem campaign keeps it on Binance’s radar.');}
-        if(spotVol>25000000){conf+=7;reasons.push('Spot volume is already substantial.');}
-        if(announcedHits.length){conf+=8;reasons.push('Recent official article coverage adds follow-through odds.');}
-        probable.push({base:base,symbol:base+'/USDT',confidence:clamp(Math.round(conf),55,93),category:'Probable',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item),spotVol?('Spot vol '+fv(spotVol)):'Spot live'].concat(announcedHits.slice(0,1).map(function(v){return v.title;})),sortTs:recentTs||Date.now()});
+        if(daysSince<=45){conf+=7;reasons.push('Recent Launchpool / ecosystem campaign keeps it on Binance’s radar.');}
+        if(spotVol>40000000){conf+=9;reasons.push('Spot volume is already meaningful enough to justify perp consideration.');}
+        else if(spotVol>8000000){conf+=5;reasons.push('Spot trading activity is alive, even if not huge.');}
+        if(ecosystemHits.length){conf+=6;reasons.push('Binance ecosystem coverage exists even without a direct futures notice.');}
+        if(supportHits.length){conf+=4;reasons.push('Additional Binance article mentions keep the asset visible in public channels.');}
+        if(assetMap[base]){conf+=3;reasons.push('Asset is fully present in Binance’s public asset catalog.');}
+        if(announcedHits.length){conf+=10;reasons.push('Recent official listing article improves follow-through odds.');}
+        pushCandidate(probable,{base:base,symbol:base+'/USDT',confidence:clamp(Math.round(conf),58,92),category:'Probable',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item),spotVol?('Spot vol '+fv(spotVol)):'Spot live'].concat(ecosystemHits.slice(0,1).map(function(v){return v.title;})).concat(supportHits.slice(0,1).map(function(v){return v.title;})),sortTs:Math.max(recentTs,latestRelease(signals),Date.now()-daysSince*864e5)});
       }else if(!spotExists&&!futuresExists){
-        var econf=54;
-        reasons.push('Shows up in Binance Launchpool / ecosystem flow before broad market rollout.');
-        if(item.status==='SUBSCRIBE'||item.status==='PREHEAT'){econf+=12;reasons.push('Campaign is still active, so listing path is still live.');}
-        if(daysSince<=21){econf+=6;reasons.push('Fresh campaign timing keeps the signal relevant.');}
-        if(ecosystemHits.length){econf+=6;reasons.push('Additional ecosystem article hits (Alpha / HODLer / Megadrop style).');}
-        early.push({base:base,symbol:base+'/USDT',confidence:clamp(Math.round(econf),35,78),category:'Early Signals',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item)].concat(ecosystemHits.slice(0,2).map(function(v){return v.title;})),sortTs:recentTs||Date.now()});
+        var econf=46;
+        var ereasons=['Shows up in Binance Launchpool / ecosystem flow before broad market rollout.'];
+        if(item.status==='SUBSCRIBE'||item.status==='PREHEAT'){econf+=10;ereasons.push('Campaign is still active, so listing path remains alive.');}
+        if(daysSince<=30){econf+=6;ereasons.push('Fresh campaign timing keeps the signal relevant.');}
+        if(ecosystemHits.length){econf+=8;ereasons.push('Additional ecosystem article hits exist beyond the raw Launchpool entry.');}
+        if(supportHits.length){econf+=4;ereasons.push('Binance article mentions exist even without a direct listing notice.');}
+        if(assetMap[base]){econf+=5;ereasons.push('Asset already exists in Binance’s public catalog, which usually precedes wider rollout.');}
+        pushCandidate(early,{base:base,symbol:base+'/USDT',confidence:clamp(Math.round(econf),38,76),category:'Early Signals',why:ereasons[0],reasons:ereasons,tags:uniq(tags),evidence:[cleanProjectName(item.projectName||base)+' / '+launchpoolLabel(item)].concat(ecosystemHits.slice(0,2).map(function(v){return v.title;})).concat(supportHits.slice(0,1).map(function(v){return v.title;})),sortTs:Math.max(recentTs,latestRelease(signals),0)});
       }
     });
+
+    Object.keys(assetMap).forEach(function(base){
+      var signals=articleSignals[base]||[];
+      var eco=signals.filter(function(v){return v.bucket==='Ecosystem';});
+      var support=signals.filter(function(v){return v.bucket==='Support';});
+      var announcedHits=signals.filter(function(v){return v.bucket==='Announced';});
+      var spotExists=!!spotBases[base],futuresExists=!!futuresBases[base];
+      var spotTicker=spotTickerMap[base+'USDT']||spotTickerMap[base+'USDC']||spotTickerMap[base+'FDUSD'];
+      var spotVol=spotTicker?parseFloat(spotTicker.quoteVolume||0):0;
+      var mentionCount=articleMentions[base]||0;
+      var recentTs=Math.max(latestRelease(signals),0);
+      if(announcedHits.length)return;
+      if(spotExists&&!futuresExists){
+        var conf=60;
+        var reasons=['Spot market exists on Binance, but a perp still has not shown up.'];
+        var tags=['Spot only','Binance'];
+        if(assetMap[base])tags.push('Asset registry');
+        if(eco.length){conf+=6;reasons.push('Ecosystem-style Binance content mentions the asset.');tags.push('Ecosystem');}
+        if(support.length){conf+=5;reasons.push('Binance article mentions extend beyond direct listing notices.');tags.push('Article mention');}
+        if(mentionCount>=2){conf+=4;reasons.push('Multiple public Binance mentions improve odds of follow-through.');}
+        if(spotVol>20000000){conf+=7;reasons.push('Spot turnover is already healthy.');}
+        else if(spotVol>3000000){conf+=3;reasons.push('Spot turnover is non-trivial.');}
+        if((spotBaseQuotes[base]||[]).length>=2){conf+=3;reasons.push('Asset already spans multiple Binance spot quote markets.');tags.push('Multi-quote spot');}
+        pushCandidate(probable,{base:base,symbol:base+'/USDT',confidence:clamp(Math.round(conf),56,84),category:'Probable',why:reasons[0],reasons:reasons,tags:uniq(tags),evidence:[spotVol?('Spot vol '+fv(spotVol)):'Spot live'].concat(eco.slice(0,1).map(function(v){return v.title;})).concat(support.slice(0,2).map(function(v){return v.title;})),sortTs:Math.max(recentTs,0)});
+      }else if(!spotExists&&!futuresExists && (eco.length||support.length||mentionCount>=2)){
+        var econf=40;
+        var ereasons=['Asset is already present in Binance public surfaces even though no live market exists yet.'];
+        var tags=['Asset registry','Binance'];
+        if(eco.length){econf+=10;ereasons.push('Ecosystem / Launchpool style content mentions the asset.');tags.push('Ecosystem');}
+        if(support.length){econf+=7;ereasons.push('There are Binance article mentions beyond direct listing notices.');tags.push('Article mention');}
+        if(mentionCount>=2){econf+=5;ereasons.push('Repeated mentions make it less likely to be a one-off reference.');}
+        pushCandidate(early,{base:base,symbol:base+'/USDT',confidence:clamp(Math.round(econf),34,68),category:'Early Signals',why:ereasons[0],reasons:ereasons,tags:uniq(tags),evidence:eco.slice(0,2).map(function(v){return v.title;}).concat(support.slice(0,2).map(function(v){return v.title;})),sortTs:Math.max(recentTs,0)});
+      }
+    });
+
     Object.keys(articleSignals).forEach(function(base){
       if(spotBases[base]||futuresBases[base])return;
-      var hits=articleSignals[base]||[];
-      var eco=hits.filter(function(v){return v.bucket==='Ecosystem';});
-      if(!eco.length)return;
-      var conf=48+Math.min(18,eco.length*6);
-      early.push({base:base,symbol:base+'/USDT',confidence:clamp(conf,35,74),category:'Early Signals',why:'Binance ecosystem mentions exist, but the trading pair is not live yet.',reasons:['Seen in Binance ecosystem content before listing confirmation','No Binance spot/perp market live yet'],tags:uniq(['Ecosystem','Binance']),evidence:eco.slice(0,2).map(function(v){return v.title;}),sortTs:eco[0].releaseDate||0});
+      if(!assetMap[base]&&!lpByCoin[base]){
+        var hits=articleSignals[base]||[];
+        var eco=hits.filter(function(v){return v.bucket==='Ecosystem';});
+        var support=hits.filter(function(v){return v.bucket==='Support';});
+        if(!eco.length&&!support.length)return;
+        var conf=36 + Math.min(14,eco.length*5) + Math.min(10,support.length*4);
+        var reasons=['Binance has mentioned the asset publicly, but no Binance spot/perp market is live yet.'];
+        if(eco.length)reasons.push('Ecosystem / campaign style references often appear before full listing decisions.');
+        if(support.length)reasons.push('Non-listing Binance articles still create a useful breadcrumb trail.');
+        pushCandidate(early,{base:base,symbol:base+'/USDT',confidence:clamp(conf,32,62),category:'Early Signals',why:reasons[0],reasons:reasons,tags:uniq(['Article mention'].concat(eco.length?['Ecosystem']:[]).concat(['Binance'])),evidence:hits.slice(0,3).map(function(v){return v.title;}),sortTs:latestRelease(hits)});
+      }
     });
-    probable=probable.sort(function(a,b){return b.confidence-a.confidence||b.sortTs-a.sortTs;}).slice(0,RADAR_SPOT_ONLY_LIMIT);
-    early=early.sort(function(a,b){return b.confidence-a.confidence||b.sortTs-a.sortTs;});
-    var earlySeen={};
-    early=early.filter(function(item){if(earlySeen[item.base])return false;earlySeen[item.base]=true;return true;}).slice(0,RADAR_EARLY_LIMIT);
+
+    function dedupe(items){
+      var seen={};
+      return items.sort(function(a,b){return (b.confidence||0)-(a.confidence||0)||((b.sortTs||0)-(a.sortTs||0));}).filter(function(item){
+        if(seen[item.base])return false;
+        seen[item.base]=true;
+        return true;
+      });
+    }
+
+    probable=dedupe(probable).slice(0,RADAR_SPOT_ONLY_LIMIT);
+    early=dedupe(early.filter(function(item){return !spotBases[item.base]||!futuresBases[item.base];})).slice(0,RADAR_EARLY_LIMIT);
     var annSeen={};
     announced=announced.filter(function(item){if(annSeen[item.base])return false;annSeen[item.base]=true;return true;});
-    return {generatedAt:Date.now(),sections:[{key:'announced',title:'Announced',hint:'Official Binance listing notices already out.',items:announced},{key:'probable',title:'Probable',hint:'Strong follow-through candidates from spot + Binance ecosystem signals.',items:probable},{key:'early',title:'Early Signals',hint:'Binance ecosystem breadcrumbs before a confirmed market listing.',items:early}]};
+
+    return {generatedAt:Date.now(),sections:[
+      {key:'announced',title:'Announced',hint:'Official Binance listing notices already out.',items:announced},
+      {key:'probable',title:'Probable',hint:'Broader follow-through ideas: spot-without-perp, Binance article coverage, and metadata gaps.',items:probable},
+      {key:'early',title:'Early Signals',hint:'Exploratory bucket: asset-catalog presence, ecosystem mentions, and other weaker Binance breadcrumbs.',items:early}
+    ]};
   });
 }
 
@@ -405,7 +494,7 @@ function rCC(coin){var sym=coin.sym,t=coin.t,a=coin.a,ot=coin.ot;var vd=gVerdict
 
 function rUC(item){var now=Date.now(),diff=item.listDate?item.listDate-now:null,ts,tl;if(diff===null){ts='TBA';tl='unconfirmed';}else if(diff<0){ts='Listed';tl='recently';}else if(diff<36e5){ts=Math.floor(diff/6e4)+'m';tl='until listing';}else if(diff<864e5){ts=Math.floor(diff/36e5)+'h '+Math.floor((diff%36e5)/6e4)+'m';tl='until listing';}else{ts=Math.ceil(diff/864e5)+'d';tl='until listing';}return '<div class="upcoming-card"><div class="upc-left"><div class="upc-sym">'+item.symbol+' <span class="new-badge">NEW</span></div><div class="upc-desc">'+item.title+'</div></div><div class="upc-time"><div class="time-val">'+ts+'</div><div class="time-lbl">'+tl+'</div></div></div>';}
 function renderRadarCard(item){var score=Math.round(item.confidence||0),scoreColor=scoreTone(score),reasonHtml='';for(var i=0;i<Math.min((item.reasons||[]).length,3);i++)reasonHtml+='<li>'+escHtml(item.reasons[i])+'</li>';var tags=(item.tags||[]).map(function(tag){return '<span class="flag '+tagClass(tag)+'">'+escHtml(tag)+'</span>';}).join('');var evidence=(item.evidence||[]).slice(0,3).map(function(ev){return '<span class="radar-meta-pill">'+escHtml(ev)+'</span>';}).join('');return '<div class="radar-card"><div class="radar-top"><div><div class="radar-symbol">'+escHtml(item.base)+' <span class="new-badge">'+escHtml(item.category)+'</span></div><div class="radar-base">'+escHtml(item.symbol||item.base+'/USDT')+(item.listDate?' • '+fmtShortDate(item.listDate):'')+'</div></div><div class="radar-score"><div class="radar-score-num" style="color:'+scoreColor+'">'+score+'</div><div class="radar-score-lbl">confidence</div></div></div><div class="radar-why">'+escHtml(item.why||'')+'</div>'+(reasonHtml?'<ul class="radar-reasons">'+reasonHtml+'</ul>':'')+'<div class="radar-tags">'+tags+'</div>'+(evidence?'<div class="radar-evidence">'+evidence+'</div>':'')+'</div>';}
-function renderRadar(){if(S.lr)return '<div class="loading-row"><div class="spinner"></div>Building radar...</div>';if(S.er)return '<div class="err">Error: '+escHtml(S.er)+'</div>';if(!S.radar||!S.radar.sections)return '<div class="inf">Radar not ready yet.</div>';var h='<div class="inf">Upcoming Radar blends official Binance announcements with Launchpool/ecosystem activity plus spot-vs-perp listing gaps.</div>';for(var i=0;i<S.radar.sections.length;i++){var sec=S.radar.sections[i],items=sec.items||[];h+='<div class="radar-section"><div class="radar-head"><div class="radar-title">'+escHtml(sec.title)+'</div><div class="radar-sub">'+escHtml(sec.hint||'')+'</div></div>';if(!items.length)h+='<div class="radar-empty">No candidates in this bucket right now.</div>';else for(var j=0;j<items.length;j++)h+=renderRadarCard(items[j]);h+='</div>';}return h;}
+function renderRadar(){if(S.lr)return '<div class="loading-row"><div class="spinner"></div>Building radar...</div>';if(S.er)return '<div class="err">Error: '+escHtml(S.er)+'</div>';if(!S.radar||!S.radar.sections)return '<div class="inf">Radar not ready yet.</div>';var h='<div class="inf">Upcoming Radar blends official Binance announcements with broader public Binance clues: Launchpool/ecosystem activity, article mentions, asset-catalog presence, and spot-vs-perp gaps. Lower buckets are heuristic and intentionally exploratory.</div>';for(var i=0;i<S.radar.sections.length;i++){var sec=S.radar.sections[i],items=sec.items||[];h+='<div class="radar-section"><div class="radar-head"><div class="radar-title">'+escHtml(sec.title)+'</div><div class="radar-sub">'+escHtml(sec.hint||'')+'</div></div>';if(!items.length)h+='<div class="radar-empty">No candidates in this bucket right now.</div>';else for(var j=0;j<items.length;j++)h+=renderRadarCard(items[j]);h+='</div>';}return h;}
 function renderRefreshStrip(){var next=S.autoRefresh?Math.max(0,Math.ceil((S.nextRefreshTs-Date.now())/1000)):0;return '<div class="refresh-strip"><div class="refresh-meta"><div class="refresh-title">Auto-refresh</div><div class="refresh-sub">'+(S.autoRefresh?'Scanning every '+Math.round(REFRESH_MS/1000)+'s • next in ':'Paused • manual scans only')+'<span id="countdown">'+(S.autoRefresh?next+'s':'--')+'</span></div></div><div class="refresh-actions"><button class="toggle-btn '+(S.autoRefresh?'on':'')+'" onclick="toggleAutoRefresh()">'+(S.autoRefresh?'ON':'OFF')+'</button></div></div>';}
 
 function rd(){var app=document.getElementById('app');if(!app)return;var fl=S.nc;if(S.f!=='all'){fl=S.nc.filter(function(c){if(S.f==='pump'||S.f==='dump'||S.f==='neutral')return gVerdict(c)===S.f;if(S.f==='postdump')return gMode(c)==='dump';return gMode(c)===S.f;});}var pu=S.nc.filter(function(c){return gVerdict(c)==='pump';}).length;var du=S.nc.filter(function(c){return gVerdict(c)==='dump';}).length;var ne=S.nc.filter(function(c){return gVerdict(c)==='neutral';}).length;var ct=S.nc.filter(function(c){return gMode(c)==='continuation';}).length;var dp=S.nc.filter(function(c){return gMode(c)==='dump';}).length;var sq=S.nc.filter(function(c){return gMode(c)==='squeeze';}).length;var sw=S.nc.filter(function(c){return gMode(c)==='swing';}).length;var usdtCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDT';}).length;var usdcCount=S.nc.filter(function(c){return (c.quote||'USDT')==='USDC';}).length;var h='<div class="tab-bar"><div class="tab '+(S.tab==='new'?'active':'')+'" onclick="st(\'new\')">New Listings</div><div class="tab '+(S.tab==='upcoming'?'active':'')+'" onclick="st(\'upcoming\')">Upcoming Radar</div></div>';if(S.tab==='new'){h+=renderRefreshStrip();if(!S.ln&&S.nc.length>0){h+='<div class="summary-bar"><div class="summary-item"><div class="summary-dot pump"></div><span class="summary-num" style="color:var(--pump)">'+pu+'</span><span class="summary-txt">pump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot dump"></div><span class="summary-num" style="color:var(--dump)">'+du+'</span><span class="summary-txt">dump</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot neutral"></div><span class="summary-num" style="color:var(--neutral)">'+ne+'</span><span class="summary-txt">watch</span></div><div class="summary-divider"></div><div class="summary-item"><div class="summary-dot accent"></div><span class="summary-num" style="color:var(--accent2)">'+sq+'</span><span class="summary-txt">traps</span></div><div class="summary-divider"></div><div class="summary-item"><span class="summary-num">'+S.nc.length+'</span><span class="summary-txt">total</span></div></div>';h+='<div class="filter-row"><div class="chip '+(S.listingScope==='recent'?'active':'')+'" onclick="setListingScope(\'recent\')">Recent 30d</div><div class="chip '+(S.listingScope==='all'?'active':'')+'" onclick="setListingScope(\'all\')">All</div><div class="chip '+(S.f==='all'?'active':'')+'" onclick="sf(\'all\')">All</div><div class="chip pump '+(S.f==='pump'?'active':'')+'" onclick="sf(\'pump\')">&#9650; Pump</div><div class="chip dump '+(S.f==='dump'?'active':'')+'" onclick="sf(\'dump\')">&#9660; Dump</div><div class="chip neutral '+(S.f==='neutral'?'active':'')+'" onclick="sf(\'neutral\')">&#9670; Watch</div><div class="chip pump '+(S.f==='continuation'?'active':'')+'" onclick="sf(\'continuation\')">Continue '+ct+'</div><div class="chip dump '+(S.f==='postdump'?'active':'')+'" onclick="sf(\'postdump\')">Post-dump '+dp+'</div><div class="chip accent '+(S.f==='squeeze'?'active':'')+'" onclick="sf(\'squeeze\')">Trap '+sq+'</div><div class="chip neutral '+(S.f==='swing'?'active':'')+'" onclick="sf(\'swing\')">Swing '+sw+'</div><div class="chip '+((S.listingScope==='all'||usdtCount>0)?'active':'')+'" onclick="void(0)">USDT '+usdtCount+'</div><div class="chip '+((S.listingScope==='all'||usdcCount>0)?'active':'')+'" onclick="void(0)">USDC '+usdcCount+'</div></div>';}if(S.ln){h+='<div class="loading-row"><div class="spinner"></div>Scanning...</div>';}else if(S.en){h+='<div class="err">Error: '+S.en+'</div>';}else if(fl.length===0){h+='<div class="empty">No coins match.</div>';}else{for(var i=0;i<fl.length;i++)h+=rCC(fl[i]);}}else{h+=renderRefreshStrip();h+=renderRadar();}app.innerHTML=h;}
